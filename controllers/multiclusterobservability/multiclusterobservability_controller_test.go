@@ -201,7 +201,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 			},
 		},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
-			StorageConfig: &mcov1beta2.StorageConfigObject{
+			StorageConfig: &mcov1beta2.StorageConfig{
 				MetricObjectStorage: &mcov1beta2.PreConfiguredStorage{
 					Key:  "test",
 					Name: "test",
@@ -478,7 +478,7 @@ func TestCheckObjStorageStatus(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{Kind: "MultiClusterObservability"},
 		ObjectMeta: metav1.ObjectMeta{Name: "test"},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
-			StorageConfig: &mcov1beta2.StorageConfigObject{
+			StorageConfig: &mcov1beta2.StorageConfig{
 				MetricObjectStorage: &mcov1beta2.PreConfiguredStorage{
 					Key:  "test",
 					Name: "test",
@@ -524,7 +524,7 @@ func TestHandleStorageSizeChange(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{Kind: "MultiClusterObservability"},
 		ObjectMeta: metav1.ObjectMeta{Name: "test"},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
-			StorageConfig: &mcov1beta2.StorageConfigObject{
+			StorageConfig: &mcov1beta2.StorageConfig{
 				MetricObjectStorage: &mcov1beta2.PreConfiguredStorage{
 					Key:  "test",
 					Name: "test",
