@@ -46,7 +46,7 @@ spec:
         - --cluster.listen-address=[$(POD_IP)]:9094
         - --storage.path=/alertmanager
         - --data.retention=120h
-        - --web.listen-address=127.0.0.1:9093
+        - --web.listen-address=0.0.0.0:9093
         - --web.route-prefix=/
         env:
         - name: POD_IP

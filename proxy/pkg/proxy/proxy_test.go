@@ -157,6 +157,7 @@ func TestProxyRequest(t *testing.T) {
 		"/api/v1/query",
 		"/api/v1/query_range",
 		"/api/v1/series",
+		"/api/v1/rules",
 	}
 
 	for _, path := range pathList {

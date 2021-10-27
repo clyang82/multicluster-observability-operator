@@ -43,29 +43,53 @@ func HandleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	serverURL, err := url.Parse(os.Getenv("METRICS_SERVER"))
-	if err != nil {
-		klog.Errorf("failed to parse url: %v", err)
-	}
-	serverHost = serverURL.Host
-	serverScheme = serverURL.Scheme
+	var reverseProxy httputil.ReverseProxy
 
-	tlsTransport, err := getTLSTransport()
-	if err != nil {
-		klog.Fatalf("failed to create tls transport: %v", err)
-	}
+	if strings.HasSuffix(req.URL.Path, "/api/v1/rules") {
+		serverURL, err := url.Parse(os.Getenv("RULES_SERVER"))
+		if err != nil {
+			klog.Errorf("failed to parse url: %v", err)
+		}
+		serverHost = serverURL.Host
+		serverScheme = serverURL.Scheme
 
-	// create the reverse proxy
-	proxy := httputil.ReverseProxy{
-		Director:  proxyRequest,
-		Transport: tlsTransport,
-	}
+		// create the reverse proxy
+		reverseProxy = httputil.ReverseProxy{
+			Director: proxyRequest,
+		}
+		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+		req.Host = serverURL.Host
+	} else {
+		serverURL, err := url.Parse(os.Getenv("METRICS_SERVER"))
+		if err != nil {
+			klog.Errorf("failed to parse url: %v", err)
+		}
+		serverHost = serverURL.Host
+		serverScheme = serverURL.Scheme
 
-	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-	req.Host = serverURL.Host
-	req.URL.Path = path.Join(basePath, req.URL.Path)
-	util.ModifyMetricsQueryParams(req, config.GetConfigOrDie().Host+projectsAPIPath)
-	proxy.ServeHTTP(res, req)
+		tlsTransport, err := getTLSTransport()
+		if err != nil {
+			klog.Fatalf("failed to create tls transport: %v", err)
+		}
+
+		// create the reverse proxy
+		reverseProxy = httputil.ReverseProxy{
+			Director:  proxyRequest,
+			Transport: tlsTransport,
+		}
+		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+		req.Host = serverURL.Host
+		req.URL.Path = path.Join(basePath, req.URL.Path)
+		util.ModifyMetricsQueryParams(req, config.GetConfigOrDie().Host+projectsAPIPath)
+	}
+	klog.Infof("request: %v", req)
+	klog.Infof("request: %v", req.Host)
+	klog.Infof("request: %v", req.URL.Path)
+	klog.Infof("request: %v", req.URL.RawPath)
+	klog.Infof("request: %v", req.URL.RawQuery)
+	klog.Infof("request: %v", req.URL.Scheme)
+
+	reverseProxy.ServeHTTP(res, req)
 }
 
 func errorHandle(rw http.ResponseWriter, req *http.Request, err error) {
@@ -148,6 +172,10 @@ func proxyRequest(r *http.Request) {
 			strings.HasSuffix(r.URL.Path, "/api/v1/query_range") ||
 			strings.HasSuffix(r.URL.Path, "/api/v1/series") {
 			r.Method = http.MethodPost
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r.Body = ioutil.NopCloser(strings.NewReader(r.URL.RawQuery))
+		} else if strings.HasSuffix(r.URL.Path, "/api/v1/rules") {
+			r.Method = http.MethodGet
 			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			r.Body = ioutil.NopCloser(strings.NewReader(r.URL.RawQuery))
 		}

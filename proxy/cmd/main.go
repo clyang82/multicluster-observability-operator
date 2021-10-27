@@ -24,6 +24,7 @@ const (
 type proxyConf struct {
 	listenAddress      string
 	metricServer       string
+	rulesServer        string
 	kubeconfigLocation string
 }
 
@@ -39,10 +40,15 @@ func main() {
 	flagset.StringVar(&cfg.listenAddress, "listen-address",
 		defaultListenAddress, "The address HTTP server should listen on.")
 	flagset.StringVar(&cfg.metricServer, "metrics-server", "",
-		"The address the metrics server should run on.")
+		"The address of the metrics server should run on.")
+	flagset.StringVar(&cfg.rulesServer, "rules-server", "",
+		"The address of the ruler server should run on.")
 
 	_ = flagset.Parse(os.Args[1:])
 	if err := os.Setenv("METRICS_SERVER", cfg.metricServer); err != nil {
+		klog.Fatalf("failed to Setenv: %v", err)
+	}
+	if err := os.Setenv("RULES_SERVER", cfg.rulesServer); err != nil {
 		klog.Fatalf("failed to Setenv: %v", err)
 	}
 
@@ -52,6 +58,7 @@ func main() {
 
 	klog.Infof("proxy server will running on: %s", cfg.listenAddress)
 	klog.Infof("metrics server is: %s", cfg.metricServer)
+	klog.Infof("rules server is: %s", cfg.rulesServer)
 	klog.Infof("kubeconfig is: %s", cfg.kubeconfigLocation)
 
 	clusterClient, err := clusterclientset.NewForConfig(config.GetConfigOrDie())

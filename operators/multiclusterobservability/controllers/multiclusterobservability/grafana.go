@@ -52,11 +52,12 @@ type GrafanaDatasource struct {
 }
 
 type JsonData struct {
-	TLSAuth      bool   `yaml:"tlsAuth,omitempty"`
-	TLSAuthCA    bool   `yaml:"tlsAuthWithCACert,omitempty"`
-	QueryTimeout string `yaml:"queryTimeout,omitempty"`
-	HttpMethod   string `yaml:"httpMethod,omitempty"`
-	TimeInterval string `yaml:"timeInterval,omitempty"`
+	TLSAuth        bool   `yaml:"tlsAuth,omitempty"`
+	TLSAuthCA      bool   `yaml:"tlsAuthWithCACert,omitempty"`
+	QueryTimeout   string `yaml:"queryTimeout,omitempty"`
+	HttpMethod     string `yaml:"httpMethod,omitempty"`
+	TimeInterval   string `yaml:"timeInterval,omitempty"`
+	Implementation string `yaml:"implementation,omitempty"`
 }
 
 type SecureJsonData struct {
@@ -84,6 +85,16 @@ func GenerateGrafanaDataSource(
 				JSONData: &JsonData{
 					QueryTimeout: "300s",
 					TimeInterval: fmt.Sprintf("%ds", mco.Spec.ObservabilityAddonSpec.Interval),
+				},
+			},
+			{
+				Name:      "Alertmanager",
+				Type:      "alertmanager",
+				Access:    "proxy",
+				IsDefault: false,
+				URL:       "http://alertmanager.open-cluster-management-observability.svc.cluster.local:9093",
+				JSONData: &JsonData{
+					Implementation: "prometheus",
 				},
 			},
 		},
