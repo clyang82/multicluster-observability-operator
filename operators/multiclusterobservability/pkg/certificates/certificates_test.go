@@ -21,12 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 var (
 	name      = "observability"
-	namespace = mcoconfig.GetDefaultNamespace()
+	namespace = config.GetDefaultNamespace()
 )
 
 func getMco() *mcov1beta2.MultiClusterObservability {

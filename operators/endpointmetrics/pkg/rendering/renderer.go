@@ -18,7 +18,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/rendering/templates"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
 	templatesutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
@@ -48,7 +48,7 @@ var (
 
 var Images = map[string]string{}
 
-func Render(r *rendererutil.Renderer, c runtimeclient.Client, hubInfo *operatorconfig.HubInfo) ([]*unstructured.Unstructured, error) {
+func Render(r *rendererutil.Renderer, c runtimeclient.Client, hubInfo *operatorsconfig.HubInfo) ([]*unstructured.Unstructured, error) {
 
 	genericTemplates, err := templates.GetTemplates(templatesutil.GetTemplateRenderer())
 	if err != nil {
@@ -67,11 +67,11 @@ func Render(r *rendererutil.Renderer, c runtimeclient.Client, hubInfo *operatorc
 			}
 			dep := obj.(*v1.Deployment)
 			spec := &dep.Spec.Template.Spec
-			spec.Containers[0].Image = Images[operatorconfig.KubeStateMetricsKey]
-			spec.Containers[1].Image = Images[operatorconfig.KubeRbacProxyKey]
-			spec.Containers[2].Image = Images[operatorconfig.KubeRbacProxyKey]
+			spec.Containers[0].Image = Images[operatorsconfig.KubeStateMetricsKey]
+			spec.Containers[1].Image = Images[operatorsconfig.KubeRbacProxyKey]
+			spec.Containers[2].Image = Images[operatorsconfig.KubeRbacProxyKey]
 			spec.ImagePullSecrets = []corev1.LocalObjectReference{
-				{Name: os.Getenv(operatorconfig.PullSecret)},
+				{Name: os.Getenv(operatorsconfig.PullSecret)},
 			}
 
 			unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
@@ -88,11 +88,11 @@ func Render(r *rendererutil.Renderer, c runtimeclient.Client, hubInfo *operatorc
 			}
 			sts := obj.(*v1.StatefulSet)
 			spec := &sts.Spec.Template.Spec
-			spec.Containers[0].Image = Images[operatorconfig.PrometheusKey]
-			spec.Containers[1].Image = Images[operatorconfig.KubeRbacProxyKey]
-			spec.Containers[2].Image = Images[operatorconfig.ConfigmapReloaderKey]
+			spec.Containers[0].Image = Images[operatorsconfig.PrometheusKey]
+			spec.Containers[1].Image = Images[operatorsconfig.KubeRbacProxyKey]
+			spec.Containers[2].Image = Images[operatorsconfig.ConfigmapReloaderKey]
 			spec.ImagePullSecrets = []corev1.LocalObjectReference{
-				{Name: os.Getenv(operatorconfig.PullSecret)},
+				{Name: os.Getenv(operatorsconfig.PullSecret)},
 			}
 
 			unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
@@ -109,10 +109,10 @@ func Render(r *rendererutil.Renderer, c runtimeclient.Client, hubInfo *operatorc
 			}
 			ds := obj.(*v1.DaemonSet)
 			spec := &ds.Spec.Template.Spec
-			spec.Containers[0].Image = Images[operatorconfig.NodeExporterKey]
-			spec.Containers[1].Image = Images[operatorconfig.KubeRbacProxyKey]
+			spec.Containers[0].Image = Images[operatorsconfig.NodeExporterKey]
+			spec.Containers[1].Image = Images[operatorsconfig.KubeRbacProxyKey]
 			spec.ImagePullSecrets = []corev1.LocalObjectReference{
-				{Name: os.Getenv(operatorconfig.PullSecret)},
+				{Name: os.Getenv(operatorsconfig.PullSecret)},
 			}
 
 			unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
@@ -160,7 +160,7 @@ func Render(r *rendererutil.Renderer, c runtimeclient.Client, hubInfo *operatorc
 
 func getDisabledMetrics(c runtimeclient.Client) (string, error) {
 	cm := &corev1.ConfigMap{}
-	err := c.Get(context.TODO(), types.NamespacedName{Name: operatorconfig.AllowlistConfigMapName,
+	err := c.Get(context.TODO(), types.NamespacedName{Name: operatorsconfig.AllowlistConfigMapName,
 		Namespace: namespace}, cm)
 	if err != nil {
 		return "", err

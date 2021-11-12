@@ -26,14 +26,14 @@ import (
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/rendering"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/util"
 	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/deploying"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
 )
 
 var (
 	log                  = ctrl.Log.WithName("controllers").WithName("ObservabilityAddon")
-	installPrometheus, _ = strconv.ParseBool(os.Getenv(operatorconfig.InstallPrometheus))
+	installPrometheus, _ = strconv.ParseBool(os.Getenv(operatorsconfig.InstallPrometheus))
 	globalRes            = []*unstructured.Unstructured{}
 )
 
@@ -106,24 +106,24 @@ func (r *ObservabilityAddonReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// retrieve the hubInfo
 	hubSecret := &corev1.Secret{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: operatorconfig.HubInfoSecretName, Namespace: namespace}, hubSecret)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: operatorsconfig.HubInfoSecretName, Namespace: namespace}, hubSecret)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	hubInfo := &operatorconfig.HubInfo{}
-	err = yaml.Unmarshal(hubSecret.Data[operatorconfig.HubInfoSecretKey], &hubInfo)
+	hubInfo := &operatorsconfig.HubInfo{}
+	err = yaml.Unmarshal(hubSecret.Data[operatorsconfig.HubInfoSecretKey], &hubInfo)
 	if err != nil {
 		log.Error(err, "Failed to unmarshal hub info")
 		return ctrl.Result{}, err
 	}
-	hubInfo.ClusterName = string(hubSecret.Data[operatorconfig.ClusterNameKey])
+	hubInfo.ClusterName = string(hubSecret.Data[operatorsconfig.ClusterNameKey])
 
 	clusterType := ""
 	clusterID := ""
 
 	//read the image configmap
 	imagesCM := &corev1.ConfigMap{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: operatorconfig.ImageConfigMap,
+	err = r.Client.Get(ctx, types.NamespacedName{Name: operatorsconfig.ImageConfigMap,
 		Namespace: namespace}, imagesCM)
 	if err != nil {
 		log.Error(err, "Failed to get images configmap")
@@ -289,7 +289,7 @@ func (r *ObservabilityAddonReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(
 			&source.Kind{Type: &corev1.Secret{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(getPred(operatorconfig.HubInfoSecretName, namespace, true, true, false)),
+			builder.WithPredicates(getPred(operatorsconfig.HubInfoSecretName, namespace, true, true, false)),
 		).
 		Watches(
 			&source.Kind{Type: &corev1.Secret{}},
@@ -309,7 +309,7 @@ func (r *ObservabilityAddonReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(
 			&source.Kind{Type: &corev1.ConfigMap{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(getPred(operatorconfig.AllowlistConfigMapName, namespace, true, true, false)),
+			builder.WithPredicates(getPred(operatorsconfig.AllowlistConfigMapName, namespace, true, true, false)),
 		).
 		Watches(
 			&source.Kind{Type: &corev1.ConfigMap{}},
@@ -329,7 +329,7 @@ func (r *ObservabilityAddonReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Watches(
 			&source.Kind{Type: &corev1.ConfigMap{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(getPred(operatorconfig.ImageConfigMap, namespace, true, true, false)),
+			builder.WithPredicates(getPred(operatorsconfig.ImageConfigMap, namespace, true, true, false)),
 		).
 		Complete(r)
 }

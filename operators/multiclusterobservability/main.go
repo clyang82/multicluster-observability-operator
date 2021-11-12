@@ -50,8 +50,8 @@ import (
 	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	mcoctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/controllers/multiclusterobservability"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/util"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/webhook"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	operatorsutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	mchv1 "github.com/open-cluster-management/multiclusterhub-operator/pkg/apis/operator/v1"
 	observatoriumAPIs "github.com/open-cluster-management/observatorium-operator/api/v1alpha1"
@@ -99,7 +99,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	crdClient, err := util.GetOrCreateCRDClient()
+	crdClient, err := operatorsutil.GetOrCreateCRDClient()
 	if err != nil {
 		setupLog.Error(err, "Failed to create the CRD client")
 		os.Exit(1)
@@ -136,13 +136,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	ingressCtlCrdExists, err := util.CheckCRDExist(crdClient, config.IngressControllerCRD)
+	ingressCtlCrdExists, err := operatorsutil.CheckCRDExist(crdClient,
+		operatorsconfig.IngressControllerCRD)
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}
 
-	mchCrdExists, err := util.CheckCRDExist(crdClient, config.MCHCrdName)
+	mchCrdExists, err := operatorsutil.CheckCRDExist(crdClient,
+		operatorsconfig.MCHCrdName)
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
@@ -168,24 +170,25 @@ func main() {
 	mcoNamespace := config.GetMCONamespace()
 	gvkLabelsMap := map[schema.GroupVersionKind][]filteredcache.Selector{
 		corev1.SchemeGroupVersion.WithKind("Secret"): []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.GetDefaultNamespace())},
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.OpenshiftIngressOperatorNamespace)},
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.OpenshiftIngressNamespace)},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s",
+				operatorsconfig.GetDefaultNamespace())},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.OpenshiftIngressOperatorNamespace)},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.OpenshiftIngressNamespace)},
 		},
 		corev1.SchemeGroupVersion.WithKind("ConfigMap"): []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.GetDefaultNamespace())},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.GetDefaultNamespace())},
 		},
 		corev1.SchemeGroupVersion.WithKind("Service"): []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.GetDefaultNamespace())},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.GetDefaultNamespace())},
 		},
 		corev1.SchemeGroupVersion.WithKind("ServiceAccount"): []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.GetDefaultNamespace())},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.GetDefaultNamespace())},
 		},
 		appsv1.SchemeGroupVersion.WithKind("Deployment"): []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.GetDefaultNamespace())},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.GetDefaultNamespace())},
 		},
 		appsv1.SchemeGroupVersion.WithKind("StatefulSet"): []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", config.GetDefaultNamespace())},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s", operatorsconfig.GetDefaultNamespace())},
 		},
 		workv1.SchemeGroupVersion.WithKind("ManifestWork"): []filteredcache.Selector{
 			{LabelSelector: "owner==multicluster-observability-operator"},
@@ -197,7 +200,8 @@ func main() {
 
 	if ingressCtlCrdExists {
 		gvkLabelsMap[operatorv1.SchemeGroupVersion.WithKind("IngressController")] = []filteredcache.Selector{
-			{FieldSelector: fmt.Sprintf("metadata.namespace==%s,metadata.name==%s", config.OpenshiftIngressOperatorNamespace, config.OpenshiftIngressOperatorCRName)},
+			{FieldSelector: fmt.Sprintf("metadata.namespace==%s,metadata.name==%s",
+				operatorsconfig.OpenshiftIngressOperatorNamespace, operatorsconfig.OpenshiftIngressOperatorCRName)},
 		}
 	}
 	if mchCrdExists {
@@ -241,20 +245,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = util.UpdateCRDWebhookNS(crdClient, mcoNamespace, config.MCOCrdName); err != nil {
+	if err = operatorsutil.UpdateCRDWebhookNS(crdClient, mcoNamespace, operatorsconfig.MCOCrdName); err != nil {
 		setupLog.Error(err, "unable to update webhook service namespace in MCO CRD", "controller", "MultiClusterObservability")
 	}
 
-	svmCrdExists, err := util.CheckCRDExist(crdClient, config.StorageVersionMigrationCrdName)
+	svmCrdExists, err := operatorsutil.CheckCRDExist(crdClient, operatorsconfig.StorageVersionMigrationCrdName)
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}
 
 	crdMaps := map[string]bool{
-		config.MCHCrdName:                     mchCrdExists,
-		config.StorageVersionMigrationCrdName: svmCrdExists,
-		config.IngressControllerCRD:           ingressCtlCrdExists,
+		operatorsconfig.MCHCrdName:                     mchCrdExists,
+		operatorsconfig.StorageVersionMigrationCrdName: svmCrdExists,
+		operatorsconfig.IngressControllerCRD:           ingressCtlCrdExists,
 	}
 
 	if err = (&mcoctrl.MultiClusterObservabilityReconciler{

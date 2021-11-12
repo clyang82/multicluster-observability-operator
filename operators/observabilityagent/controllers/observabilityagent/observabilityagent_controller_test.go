@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
-package placementrule
+package observabilityagent
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	imageregistryv1alpha1 "github.com/open-cluster-management/multicloud-operators-foundation/pkg/apis/imageregistry/v1alpha1"
 	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering/templates"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	mchv1 "github.com/open-cluster-management/multiclusterhub-operator/pkg/apis/operator/v1"
 	addonv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	mcoNamespace = config.GetDefaultNamespace()
+	mcoNamespace = operatorsconfig.GetDefaultNamespace()
 )
 
 func initSchema(t *testing.T) {
@@ -85,11 +85,11 @@ var testImagemanifestsMap = map[string]string{
 func newTestImageManifestsConfigMap(namespace, version string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ImageManifestConfigMapNamePrefix + version,
+			Name:      operatorsconfig.ImageManifestConfigMapNamePrefix + version,
 			Namespace: namespace,
 			Labels: map[string]string{
-				config.OCMManifestConfigMapTypeLabelKey:    config.OCMManifestConfigMapTypeLabelValue,
-				config.OCMManifestConfigMapVersionLabelKey: version,
+				operatorsconfig.OCMManifestConfigMapTypeLabelKey:    operatorsconfig.OCMManifestConfigMapTypeLabelValue,
+				operatorsconfig.OCMManifestConfigMapVersionLabelKey: version,
 			},
 		},
 		Data: testImagemanifestsMap,
@@ -114,7 +114,7 @@ func TestObservabilityAddonController(t *testing.T) {
 	s := scheme.Scheme
 	addonv1alpha1.AddToScheme(s)
 	initSchema(t)
-	config.SetMonitoringCRName(mcoName)
+	operatorsconfig.SetMonitoringCRName(mcoName)
 	mco := newTestMCO()
 	pull := newTestPullSecret()
 	deprecatedRole := &rbacv1.Role{
@@ -129,7 +129,7 @@ func TestObservabilityAddonController(t *testing.T) {
 	objs := []runtime.Object{mco, pull, newTestObsApiRoute(), newTestAlertmanagerRoute(), newTestIngressController(), newTestRouteCASecret(), newCASecret(), newCertSecret(mcoNamespace), NewMetricsAllowListCM(),
 		NewAmAccessorSA(), NewAmAccessorTokenSecret(), newManagedClusterAddon(), deprecatedRole}
 	c := fake.NewFakeClient(objs...)
-	r := &PlacementRuleReconciler{Client: c, Scheme: s, CRDMap: map[string]bool{config.IngressControllerCRD: true}}
+	r := &ObservabilityAgentReconciler{Client: c, Scheme: s, CRDMap: map[string]bool{operatorsconfig.IngressControllerCRD: true}}
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -147,7 +147,7 @@ func TestObservabilityAddonController(t *testing.T) {
 
 	req := ctrl.Request{
 		NamespacedName: types.NamespacedName{
-			Name:      config.GetDefaultCRName(),
+			Name:      operatorsconfig.GetDefaultCRName(),
 			Namespace: mcoNamespace,
 		},
 	}
@@ -253,13 +253,13 @@ func TestObservabilityAddonController(t *testing.T) {
 
 	// test mch update and image replacement
 	version := "2.4.0"
-	imageManifestsCM := newTestImageManifestsConfigMap(config.GetMCONamespace(), version)
+	imageManifestsCM := newTestImageManifestsConfigMap(operatorsconfig.GetMCONamespace(), version)
 	err = c.Create(context.TODO(), imageManifestsCM)
 	if err != nil {
 		t.Fatalf("Failed to create the testing image manifest configmap: (%v)", err)
 	}
 
-	testMCHInstance := newMCHInstanceWithVersion(config.GetMCONamespace(), version)
+	testMCHInstance := newMCHInstanceWithVersion(operatorsconfig.GetMCONamespace(), version)
 	err = c.Create(context.TODO(), testMCHInstance)
 	if err != nil {
 		t.Fatalf("Failed to create the testing mch instance: (%v)", err)
@@ -267,17 +267,17 @@ func TestObservabilityAddonController(t *testing.T) {
 
 	req = ctrl.Request{
 		NamespacedName: types.NamespacedName{
-			Name: config.MCHUpdatedRequestName,
+			Name: operatorsconfig.MCHUpdatedRequestName,
 		},
 	}
 
-	ok, err := config.ReadImageManifestConfigMap(c, testMCHInstance.Status.CurrentVersion)
+	ok, err := operatorsconfig.ReadImageManifestConfigMap(c, testMCHInstance.Status.CurrentVersion)
 	if err != nil || !ok {
 		t.Fatalf("Failed to read image manifest configmap: (%T,%v)", ok, err)
 	}
 
 	// set the MCHCrdName for the reconciler
-	r.CRDMap[config.MCHCrdName] = true
+	r.CRDMap[operatorsconfig.MCHCrdName] = true
 	_, err = r.Reconcile(context.TODO(), req)
 	if err != nil {
 		t.Fatalf("reconcile: (%v)", err)

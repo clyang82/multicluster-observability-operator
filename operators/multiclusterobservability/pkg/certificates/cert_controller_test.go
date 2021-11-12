@@ -17,6 +17,7 @@ import (
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 func init() {
@@ -24,7 +25,7 @@ func init() {
 
 	s := scheme.Scheme
 	mcov1beta2.SchemeBuilder.AddToScheme(s)
-	config.SetMonitoringCRName(name)
+	operatorsconfig.SetMonitoringCRName(name)
 }
 
 func newDeployment(name string) *appv1.Deployment {

@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 const (
@@ -34,7 +34,7 @@ alertmanager-router-ca: |
 )
 
 func TestCreateDeleteHubAmRouterCASecret(t *testing.T) {
-	hubInfo := &operatorconfig.HubInfo{}
+	hubInfo := &operatorsconfig.HubInfo{}
 	err := yaml.Unmarshal([]byte(hubInfoYAML), &hubInfo)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal hubInfo: (%v)", err)
@@ -132,7 +132,7 @@ prometheusK8s:
 		},
 	}
 
-	hubInfo := &operatorconfig.HubInfo{}
+	hubInfo := &operatorsconfig.HubInfo{}
 	err := yaml.Unmarshal([]byte(hubInfoYAML), &hubInfo)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal hubInfo: (%v)", err)
@@ -151,7 +151,7 @@ prometheusK8s:
 	}
 }
 
-func testCreateOrUpdateClusterMonitoringConfig(t *testing.T, hubInfo *operatorconfig.HubInfo, c client.Client, expectedCMDelete bool) {
+func testCreateOrUpdateClusterMonitoringConfig(t *testing.T, hubInfo *operatorsconfig.HubInfo, c client.Client, expectedCMDelete bool) {
 	ctx := context.TODO()
 	err := createOrUpdateClusterMonitoringConfig(ctx, hubInfo, testClusterID, c, false)
 	if err != nil {

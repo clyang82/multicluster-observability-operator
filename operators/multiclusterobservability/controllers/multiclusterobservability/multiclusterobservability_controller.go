@@ -38,15 +38,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	placementctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/controllers/placementrule"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/certificates"
-	certctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/certificates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering"
-	smctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/servicemonitor"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/util"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/deploying"
-	commonutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	mchv1 "github.com/open-cluster-management/multiclusterhub-operator/pkg/apis/operator/v1"
 	observatoriumv1alpha1 "github.com/open-cluster-management/observatorium-operator/api/v1alpha1"
 )
@@ -98,7 +95,7 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 	// Fetch the MultiClusterObservability instance
 	instance := &mcov1beta2.MultiClusterObservability{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
-		Name: config.GetMonitoringCRName(),
+		Name: operatorsconfig.GetMonitoringCRName(),
 	}, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -114,20 +111,6 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 	// start to update mco status
 	StartStatusUpdate(r.Client, instance)
 
-	ingressCtlCrdExists, _ := r.CRDMap[config.IngressControllerCRD]
-	if os.Getenv("UNIT_TEST") != "true" {
-		// start placement controller
-		err := placementctrl.StartPlacementController(r.Manager, r.CRDMap)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		// setup ocm addon manager
-		certctrl.Start(r.Client, ingressCtlCrdExists)
-
-		// start servicemonitor controller
-		smctrl.Start()
-	}
-
 	// Init finalizers
 	isTerminating, err := r.initFinalization(instance)
 	if err != nil {
@@ -138,15 +121,15 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 	}
 
 	// check if the MCH CRD exists
-	mchCrdExists, _ := r.CRDMap[config.MCHCrdName]
+	mchCrdExists, _ := r.CRDMap[operatorsconfig.MCHCrdName]
 	// requeue after 10 seconds if the mch crd exists and image image manifests map is empty
-	if mchCrdExists && len(config.GetImageManifests()) == 0 {
+	if mchCrdExists && len(operatorsconfig.GetImageManifests()) == 0 {
 		// if the mch CR is not ready, then requeue the request after 10s
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	// Do not reconcile objects if this instance of mch is labeled "paused"
-	if config.IsPaused(instance.GetAnnotations()) {
+	if operatorsconfig.IsPaused(instance.GetAnnotations()) {
 		reqLogger.Info("MCO reconciliation is paused. Nothing more to do.")
 		return ctrl.Result{}, nil
 	}
@@ -185,7 +168,7 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 			reqLogger.Error(err, "Failed to set controller reference", "kind", res.GetKind(), "name", res.GetName())
 		}
 		if resNS == "" {
-			resNS = config.GetDefaultNamespace()
+			resNS = operatorsconfig.GetDefaultNamespace()
 		}
 		if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: resNS}, ns); err != nil && apierrors.IsNotFound(err) {
 			ns = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
@@ -198,7 +181,7 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 		}
 		if err := deployer.Deploy(res); err != nil {
 			reqLogger.Error(err, fmt.Sprintf("Failed to deploy %s %s/%s",
-				res.GetKind(), config.GetDefaultNamespace(), res.GetName()))
+				res.GetKind(), operatorsconfig.GetDefaultNamespace(), res.GetName()))
 			return ctrl.Result{}, err
 		}
 	}
@@ -206,6 +189,7 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 	// the route resource won't be created in testing env, for instance, KinD
 	// in the testing env, the service can be accessed via service name, we assume that
 	// in testing env, the local-cluster is the only allowed managedcluster
+	ingressCtlCrdExists, _ := r.CRDMap[operatorsconfig.IngressControllerCRD]
 	if ingressCtlCrdExists {
 		// expose alertmanager through route
 		result, err = GenerateAlertmanagerRoute(r.Client, r.Scheme, instance)
@@ -244,7 +228,7 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 		return *result, err
 	}
 
-	svmCrdExists, _ := r.CRDMap[config.StorageVersionMigrationCrdName]
+	svmCrdExists, _ := r.CRDMap[operatorsconfig.StorageVersionMigrationCrdName]
 	if svmCrdExists {
 		// create or update the storage version migration resource
 		err = createOrUpdateObservabilityStorageVersionMigrationResource(r.Client, r.Scheme, instance)
@@ -267,7 +251,7 @@ func labelsForMultiClusterMonitoring(name string) map[string]string {
 
 func (r *MultiClusterObservabilityReconciler) initFinalization(
 	mco *mcov1beta2.MultiClusterObservability) (bool, error) {
-	if mco.GetDeletionTimestamp() != nil && commonutil.Contains(mco.GetFinalizers(), resFinalizer) {
+	if mco.GetDeletionTimestamp() != nil && util.Contains(mco.GetFinalizers(), resFinalizer) {
 		log.Info("To delete resources across namespaces")
 		// clean up the cluster resources, eg. clusterrole, clusterrolebinding, etc
 		if err := cleanUpClusterScopedResources(r.Client, mco); err != nil {
@@ -278,7 +262,7 @@ func (r *MultiClusterObservabilityReconciler) initFinalization(
 		// clean up operand names
 		config.CleanUpOperandNames()
 
-		mco.SetFinalizers(commonutil.Remove(mco.GetFinalizers(), resFinalizer))
+		mco.SetFinalizers(util.Remove(mco.GetFinalizers(), resFinalizer))
 		err := r.Client.Update(context.TODO(), mco)
 		if err != nil {
 			log.Error(err, "Failed to remove finalizer from mco resource")
@@ -291,8 +275,8 @@ func (r *MultiClusterObservabilityReconciler) initFinalization(
 
 		return true, nil
 	}
-	if !commonutil.Contains(mco.GetFinalizers(), resFinalizer) {
-		mco.SetFinalizers(commonutil.Remove(mco.GetFinalizers(), certFinalizer))
+	if !util.Contains(mco.GetFinalizers(), resFinalizer) {
+		mco.SetFinalizers(util.Remove(mco.GetFinalizers(), certFinalizer))
 		mco.SetFinalizers(append(mco.GetFinalizers(), resFinalizer))
 		err := r.Client.Update(context.TODO(), mco)
 		if err != nil {
@@ -334,7 +318,7 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 	mcoPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			//set request name to be used in placementrule controller
-			config.SetMonitoringCRName(e.Object.GetName())
+			operatorsconfig.SetMonitoringCRName(e.Object.GetName())
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -350,7 +334,7 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 	cmPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			if e.Object.GetName() == config.AlertRuleCustomConfigMapName &&
-				e.Object.GetNamespace() == config.GetDefaultNamespace() {
+				e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() {
 				config.SetCustomRuleConfigMap(true)
 				return true
 			}
@@ -367,7 +351,7 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			if e.Object.GetName() == config.AlertRuleCustomConfigMapName &&
-				e.Object.GetNamespace() == config.GetDefaultNamespace() {
+				e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() {
 				config.SetCustomRuleConfigMap(false)
 				return true
 			}
@@ -377,25 +361,25 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 
 	secretPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Object.GetNamespace() == config.GetDefaultNamespace() &&
-				(e.Object.GetName() == config.AlertmanagerRouteBYOCAName ||
-					e.Object.GetName() == config.AlertmanagerRouteBYOCERTName) {
+			if e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() &&
+				(e.Object.GetName() == operatorsconfig.AlertmanagerRouteBYOCAName ||
+					e.Object.GetName() == operatorsconfig.AlertmanagerRouteBYOCERTName) {
 				return true
 			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.ObjectNew.GetNamespace() == config.GetDefaultNamespace() &&
-				(e.ObjectNew.GetName() == config.AlertmanagerRouteBYOCAName ||
-					e.ObjectNew.GetName() == config.AlertmanagerRouteBYOCERTName) {
+			if e.ObjectNew.GetNamespace() == operatorsconfig.GetDefaultNamespace() &&
+				(e.ObjectNew.GetName() == operatorsconfig.AlertmanagerRouteBYOCAName ||
+					e.ObjectNew.GetName() == operatorsconfig.AlertmanagerRouteBYOCERTName) {
 				return true
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			if e.Object.GetNamespace() == config.GetDefaultNamespace() &&
-				(e.Object.GetName() == config.AlertmanagerRouteBYOCAName ||
-					e.Object.GetName() == config.AlertmanagerRouteBYOCERTName ||
+			if e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() &&
+				(e.Object.GetName() == operatorsconfig.AlertmanagerRouteBYOCAName ||
+					e.Object.GetName() == operatorsconfig.AlertmanagerRouteBYOCERTName ||
 					e.Object.GetName() == config.AlertmanagerConfigName) {
 				return true
 			}
@@ -432,7 +416,7 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 					e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion != "" &&
 					e.Object.(*mchv1.MultiClusterHub).Status.DesiredVersion == e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion {
 					// only read the image manifests configmap and enqueue the request when the MCH is installed/upgraded successfully
-					ok, err := config.ReadImageManifestConfigMap(c, e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion)
+					ok, err := operatorsconfig.ReadImageManifestConfigMap(c, e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion)
 					if err != nil {
 						return false
 					}
@@ -445,7 +429,7 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 					e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion != "" &&
 					e.ObjectNew.(*mchv1.MultiClusterHub).Status.DesiredVersion == e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion {
 					// only read the image manifests configmap and enqueue the request when the MCH is installed/upgraded successfully
-					ok, err := config.ReadImageManifestConfigMap(c, e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion)
+					ok, err := operatorsconfig.ReadImageManifestConfigMap(c, e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion)
 					if err != nil {
 						return false
 					}
@@ -458,13 +442,13 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 			},
 		}
 
-		mchCrdExists, _ := r.CRDMap[config.MCHCrdName]
+		mchCrdExists, _ := r.CRDMap[operatorsconfig.MCHCrdName]
 		if mchCrdExists {
 			// secondary watch for MCH
 			ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &mchv1.MultiClusterHub{}}, handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
 				return []reconcile.Request{
 					{NamespacedName: types.NamespacedName{
-						Name:      config.MCHUpdatedRequestName,
+						Name:      operatorsconfig.MCHUpdatedRequestName,
 						Namespace: a.GetNamespace(),
 					}},
 				}
@@ -610,7 +594,7 @@ func GenerateAlertmanagerRoute(
 	amGateway := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      config.AlertmanagerRouteName,
-			Namespace: config.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		},
 		Spec: routev1.RouteSpec{
 			Path: "/api/v2",
@@ -630,8 +614,10 @@ func GenerateAlertmanagerRoute(
 
 	amRouteBYOCaSrt := &corev1.Secret{}
 	amRouteBYOCertSrt := &corev1.Secret{}
-	err1 := runclient.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteBYOCAName, Namespace: config.GetDefaultNamespace()}, amRouteBYOCaSrt)
-	err2 := runclient.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteBYOCERTName, Namespace: config.GetDefaultNamespace()}, amRouteBYOCertSrt)
+	err1 := runclient.Get(context.TODO(), types.NamespacedName{Name: operatorsconfig.AlertmanagerRouteBYOCAName,
+		Namespace: operatorsconfig.GetDefaultNamespace()}, amRouteBYOCaSrt)
+	err2 := runclient.Get(context.TODO(), types.NamespacedName{Name: operatorsconfig.AlertmanagerRouteBYOCERTName,
+		Namespace: operatorsconfig.GetDefaultNamespace()}, amRouteBYOCertSrt)
 
 	if err1 == nil && err2 == nil {
 		log.Info("BYO CA/Certificate found for the Route of Alertmanager, will using BYO CA/certificate for the Route of Alertmanager")
@@ -687,7 +673,7 @@ func GenerateProxyRoute(
 	proxyGateway := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      config.ProxyRouteName,
-			Namespace: config.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		},
 		Spec: routev1.RouteSpec{
 			Port: &routev1.RoutePort{
@@ -706,8 +692,8 @@ func GenerateProxyRoute(
 
 	proxyRouteBYOCaSrt := &corev1.Secret{}
 	proxyRouteBYOCertSrt := &corev1.Secret{}
-	err1 := runclient.Get(context.TODO(), types.NamespacedName{Name: config.ProxyRouteBYOCAName, Namespace: config.GetDefaultNamespace()}, proxyRouteBYOCaSrt)
-	err2 := runclient.Get(context.TODO(), types.NamespacedName{Name: config.ProxyRouteBYOCERTName, Namespace: config.GetDefaultNamespace()}, proxyRouteBYOCertSrt)
+	err1 := runclient.Get(context.TODO(), types.NamespacedName{Name: config.ProxyRouteBYOCAName, Namespace: operatorsconfig.GetDefaultNamespace()}, proxyRouteBYOCaSrt)
+	err2 := runclient.Get(context.TODO(), types.NamespacedName{Name: config.ProxyRouteBYOCERTName, Namespace: operatorsconfig.GetDefaultNamespace()}, proxyRouteBYOCertSrt)
 
 	if err1 == nil && err2 == nil {
 		log.Info("BYO CA/Certificate found for the Route of Proxy, will using BYO CA/certificate for the Route of Proxy")

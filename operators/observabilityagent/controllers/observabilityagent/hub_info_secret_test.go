@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
-package placementrule
+package observabilityagent
 
 import (
 	"strings"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 const (
@@ -54,8 +54,8 @@ func newTestAlertmanagerRoute() *routev1.Route {
 func newTestIngressController() *operatorv1.IngressController {
 	return &operatorv1.IngressController{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.OpenshiftIngressOperatorCRName,
-			Namespace: config.OpenshiftIngressOperatorNamespace,
+			Name:      operatorsconfig.OpenshiftIngressOperatorCRName,
+			Namespace: operatorsconfig.OpenshiftIngressOperatorNamespace,
 		},
 		Spec: operatorv1.IngressControllerSpec{
 			DefaultCertificate: &corev1.LocalObjectReference{
@@ -73,7 +73,7 @@ func newTestRouteCASecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "custom-certs-default",
-			Namespace: config.OpenshiftIngressNamespace,
+			Namespace: operatorsconfig.OpenshiftIngressNamespace,
 		},
 		Data: configYamlMap,
 	}
@@ -85,7 +85,7 @@ func newTestAmRouteBYOCA() *corev1.Secret {
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.AlertmanagerRouteBYOCAName,
+			Name:      operatorsconfig.AlertmanagerRouteBYOCAName,
 			Namespace: mcoNamespace,
 		},
 		Data: configYamlMap,
@@ -99,7 +99,7 @@ func newTestAmRouteBYOCert() *corev1.Secret {
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.AlertmanagerRouteBYOCERTName,
+			Name:      operatorsconfig.AlertmanagerRouteBYOCERTName,
 			Namespace: mcoNamespace,
 		},
 		Data: configYamlMap,
@@ -116,8 +116,8 @@ func TestNewSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initial the hub info secret: (%v)", err)
 	}
-	hub := &operatorconfig.HubInfo{}
-	err = yaml.Unmarshal(hubInfo.Data[operatorconfig.HubInfoSecretKey], &hub)
+	hub := &operatorsconfig.HubInfo{}
+	err = yaml.Unmarshal(hubInfo.Data[operatorsconfig.HubInfoSecretKey], &hub)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal data in hub info secret (%v)", err)
 	}
@@ -136,8 +136,8 @@ func TestNewBYOSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initial the hub info secret: (%v)", err)
 	}
-	hub := &operatorconfig.HubInfo{}
-	err = yaml.Unmarshal(hubInfo.Data[operatorconfig.HubInfoSecretKey], &hub)
+	hub := &operatorsconfig.HubInfo{}
+	err = yaml.Unmarshal(hubInfo.Data[operatorsconfig.HubInfoSecretKey], &hub)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal data in hub info secret (%v)", err)
 	}

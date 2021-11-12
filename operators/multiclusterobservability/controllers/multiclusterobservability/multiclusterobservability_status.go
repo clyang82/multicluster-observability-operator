@@ -18,6 +18,7 @@ import (
 	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 var (
@@ -80,7 +81,7 @@ func StartStatusUpdate(c client.Client, instance *mcov1beta2.MultiClusterObserva
 func updateStatus(c client.Client) {
 	instance := &mcov1beta2.MultiClusterObservability{}
 	err := c.Get(context.TODO(), types.NamespacedName{
-		Name: config.GetMonitoringCRName(),
+		Name: operatorsconfig.GetMonitoringCRName(),
 	}, instance)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to get existing mco %s", instance.Name))
@@ -247,7 +248,7 @@ func updateAddonSpecStatus(
 func getExpectedDeploymentNames() []string {
 	return []string{
 		config.GetOperandNamePrefix() + config.Grafana,
-		config.GetOperandNamePrefix() + config.ObservatoriumAPI,
+		config.GetOperandNamePrefix() + operatorsconfig.ObservatoriumAPI,
 		config.GetOperandNamePrefix() + config.ThanosQuery,
 		config.GetOperandNamePrefix() + config.ThanosQueryFrontend,
 		config.GetOperandNamePrefix() + config.ThanosReceiveController,
@@ -264,7 +265,7 @@ func checkDeployStatus(
 		found := &appsv1.Deployment{}
 		namespacedName := types.NamespacedName{
 			Name:      name,
-			Namespace: config.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		}
 		err := c.Get(context.TODO(), namespacedName, found)
 		if err != nil {
@@ -300,7 +301,7 @@ func checkStatefulSetStatus(
 		found := &appsv1.StatefulSet{}
 		namespacedName := types.NamespacedName{
 			Name:      name,
-			Namespace: config.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		}
 		err := c.Get(context.TODO(), namespacedName, found)
 		if err != nil {
@@ -324,7 +325,7 @@ func checkObjStorageStatus(
 	secret := &corev1.Secret{}
 	namespacedName := types.NamespacedName{
 		Name:      objStorageConf.Name,
-		Namespace: config.GetDefaultNamespace(),
+		Namespace: operatorsconfig.GetDefaultNamespace(),
 	}
 
 	err := c.Get(context.TODO(), namespacedName, secret)

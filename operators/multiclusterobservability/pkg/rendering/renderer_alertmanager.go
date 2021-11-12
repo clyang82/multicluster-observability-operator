@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/kustomize/v3/pkg/resource"
 
 	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
@@ -54,7 +55,7 @@ func (r *MCORenderer) renderAlertManagerStatefulSet(res *resource.Resource,
 	dep.Spec.Replicas = mcoconfig.GetReplicas(mcoconfig.Alertmanager, r.cr.Spec.AdvancedConfig)
 
 	spec := &dep.Spec.Template.Spec
-	spec.Containers[0].ImagePullPolicy = mcoconfig.GetImagePullPolicy(r.cr.Spec)
+	spec.Containers[0].ImagePullPolicy = operatorsconfig.GetImagePullPolicy(r.cr.Spec)
 	args := spec.Containers[0].Args
 
 	if *dep.Spec.Replicas > 1 {
@@ -62,39 +63,39 @@ func (r *MCORenderer) renderAlertManagerStatefulSet(res *resource.Resource,
 			args = append(args, "--cluster.peer="+
 				mcoconfig.GetOperandNamePrefix()+"alertmanager-"+
 				strconv.Itoa(int(i))+".alertmanager-operated."+
-				mcoconfig.GetDefaultNamespace()+".svc:9094")
+				operatorsconfig.GetDefaultNamespace()+".svc:9094")
 		}
 	}
 
 	spec.Containers[0].Args = args
 	spec.Containers[0].Resources = mcoconfig.GetResources(mcoconfig.Alertmanager, r.cr.Spec.AdvancedConfig)
 
-	spec.Containers[1].ImagePullPolicy = mcoconfig.GetImagePullPolicy(r.cr.Spec)
+	spec.Containers[1].ImagePullPolicy = operatorsconfig.GetImagePullPolicy(r.cr.Spec)
 	spec.NodeSelector = r.cr.Spec.NodeSelector
 	spec.Tolerations = r.cr.Spec.Tolerations
 	spec.ImagePullSecrets = []corev1.LocalObjectReference{
-		{Name: mcoconfig.GetImagePullSecret(r.cr.Spec)},
+		{Name: operatorsconfig.GetImagePullSecret(r.cr.Spec)},
 	}
 
-	spec.Containers[0].Image = mcoconfig.DefaultImgRepository + "/" + mcoconfig.AlertManagerImgName +
-		":" + mcoconfig.DefaultImgTagSuffix
+	spec.Containers[0].Image = operatorsconfig.DefaultImgRepository + "/" + mcoconfig.AlertManagerImgName +
+		":" + operatorsconfig.DefaultImgTagSuffix
 	//replace the alertmanager and config-reloader images
-	found, image := mcoconfig.ReplaceImage(
+	found, image := operatorsconfig.ReplaceImage(
 		r.cr.Annotations,
-		mcoconfig.DefaultImgRepository+"/"+mcoconfig.AlertManagerImgName,
+		operatorsconfig.DefaultImgRepository+"/"+mcoconfig.AlertManagerImgName,
 		mcoconfig.AlertManagerImgKey)
 	if found {
 		spec.Containers[0].Image = image
 	}
 
-	found, image = mcoconfig.ReplaceImage(r.cr.Annotations, mcoconfig.ConfigmapReloaderImgRepo,
-		mcoconfig.ConfigmapReloaderKey)
+	found, image = operatorsconfig.ReplaceImage(r.cr.Annotations, operatorsconfig.ConfigmapReloaderImgRepo,
+		operatorsconfig.ConfigmapReloaderKey)
 	if found {
 		spec.Containers[1].Image = image
 	}
 	// the oauth-proxy image only exists in mch-image-manifest configmap
 	// pass nil annotation to make sure oauth-proxy overrided from mch-image-manifest
-	found, image = mcoconfig.ReplaceImage(nil, mcoconfig.OauthProxyImgRepo,
+	found, image = operatorsconfig.ReplaceImage(nil, mcoconfig.OauthProxyImgRepo,
 		mcoconfig.OauthProxyKey)
 	if found {
 		spec.Containers[2].Image = image

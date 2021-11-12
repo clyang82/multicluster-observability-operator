@@ -20,7 +20,7 @@ import (
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/rendering"
 	oashared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 const (
@@ -60,7 +60,7 @@ type Rule struct {
 
 func createDeployment(clusterID string, clusterType string,
 	obsAddonSpec oashared.ObservabilityAddonSpec,
-	hubInfo operatorconfig.HubInfo, allowlist MetricsAllowlist,
+	hubInfo operatorsconfig.HubInfo, allowlist MetricsAllowlist,
 	nodeSelector map[string]string, tolerations []corev1.Toleration,
 	replicaCount int32) *appsv1.Deployment {
 	interval := fmt.Sprint(obsAddonSpec.Interval) + "s"
@@ -182,7 +182,7 @@ func createDeployment(clusterID string, clusterType string,
 					Containers: []corev1.Container{
 						{
 							Name:    "metrics-collector",
-							Image:   rendering.Images[operatorconfig.MetricsCollectorKey],
+							Image:   rendering.Images[operatorsconfig.MetricsCollectorKey],
 							Command: commands,
 							Env: []corev1.EnvVar{
 								{
@@ -212,7 +212,7 @@ func createDeployment(clusterID string, clusterType string,
 }
 
 func updateMetricsCollector(ctx context.Context, client client.Client, obsAddonSpec oashared.ObservabilityAddonSpec,
-	hubInfo operatorconfig.HubInfo, clusterID string, clusterType string,
+	hubInfo operatorsconfig.HubInfo, clusterID string, clusterType string,
 	replicaCount int32, forceRestart bool) (bool, error) {
 
 	list := getMetricsAllowlist(ctx, client)
@@ -279,7 +279,7 @@ func int32Ptr(i int32) *int32 { return &i }
 func getMetricsAllowlist(ctx context.Context, client client.Client) MetricsAllowlist {
 	l := &MetricsAllowlist{}
 	cm := &corev1.ConfigMap{}
-	err := client.Get(ctx, types.NamespacedName{Name: operatorconfig.AllowlistConfigMapName,
+	err := client.Get(ctx, types.NamespacedName{Name: operatorsconfig.AllowlistConfigMapName,
 		Namespace: namespace}, cm)
 	if err != nil {
 		log.Error(err, "Failed to get configmap")

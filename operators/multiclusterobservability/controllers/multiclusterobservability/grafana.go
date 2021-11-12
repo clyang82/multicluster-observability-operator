@@ -22,6 +22,7 @@ import (
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 const (
@@ -80,7 +81,7 @@ func GenerateGrafanaDataSource(
 				Type:      "prometheus",
 				Access:    "proxy",
 				IsDefault: true,
-				URL:       fmt.Sprintf("http://%s.%s.svc.cluster.local:8080", config.ProxyServiceName, config.GetDefaultNamespace()),
+				URL:       fmt.Sprintf("http://%s.%s.svc.cluster.local:8080", config.ProxyServiceName, operatorsconfig.GetDefaultNamespace()),
 				JSONData: &JsonData{
 					QueryTimeout: "300s",
 					TimeInterval: fmt.Sprintf("%ds", mco.Spec.ObservabilityAddonSpec.Interval),
@@ -95,7 +96,7 @@ func GenerateGrafanaDataSource(
 	dsSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "grafana-datasources",
-			Namespace: config.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{
@@ -158,7 +159,7 @@ func updateDeployLabel(c client.Client) error {
 	dep := &appv1.Deployment{}
 	err := c.Get(context.TODO(), types.NamespacedName{
 		Name:      name,
-		Namespace: config.GetDefaultNamespace(),
+		Namespace: operatorsconfig.GetDefaultNamespace(),
 	}, dep)
 	if err != nil {
 		if !errors.IsNotFound(err) {

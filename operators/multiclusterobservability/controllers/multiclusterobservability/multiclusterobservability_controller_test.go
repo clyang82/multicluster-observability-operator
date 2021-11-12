@@ -35,6 +35,7 @@ import (
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering/templates"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	addonv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 )
@@ -74,11 +75,11 @@ var testImagemanifestsMap = map[string]string{
 func newTestImageManifestsConfigMap(namespace, version string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ImageManifestConfigMapNamePrefix + version,
+			Name:      operatorsconfig.ImageManifestConfigMapNamePrefix + version,
 			Namespace: namespace,
 			Labels: map[string]string{
-				config.OCMManifestConfigMapTypeLabelKey:    config.OCMManifestConfigMapTypeLabelValue,
-				config.OCMManifestConfigMapVersionLabelKey: version,
+				operatorsconfig.OCMManifestConfigMapTypeLabelKey:    operatorsconfig.OCMManifestConfigMapTypeLabelValue,
+				operatorsconfig.OCMManifestConfigMapVersionLabelKey: version,
 			},
 		},
 		Data: testImagemanifestsMap,
@@ -241,7 +242,7 @@ func createClusterVersion() *configv1.ClusterVersion {
 
 func createMultiClusterHubCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 	return &apiextensionsv1beta1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: config.MCHCrdName},
+		ObjectMeta: metav1.ObjectMeta{Name: operatorsconfig.MCHCrdName},
 		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
 			Scope:      apiextensionsv1beta1.NamespaceScoped,
 			Conversion: &apiextensionsv1beta1.CustomResourceConversion{Strategy: apiextensionsv1beta1.NoneConverter},
@@ -264,7 +265,7 @@ func createMultiClusterHubCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 	var (
 		name      = "monitoring"
-		namespace = config.GetDefaultNamespace()
+		namespace = operatorsconfig.GetDefaultNamespace()
 	)
 
 	wd, err := os.Getwd()
@@ -280,7 +281,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
-				config.AnnotationKeyImageTagSuffix: "tag",
+				operatorsconfig.AnnotationKeyImageTagSuffix: "tag",
 			},
 		},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
@@ -312,13 +313,13 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 	migrationv1alpha1.SchemeBuilder.AddToScheme(s)
 
 	svc := createObservatoriumAPIService(name, namespace)
-	serverCACerts := newTestCert(config.ServerCACerts, namespace)
+	serverCACerts := newTestCert(operatorsconfig.ServerCACerts, namespace)
 	clientCACerts := newTestCert(config.ClientCACerts, namespace)
 	grafanaCert := newTestCert(config.GrafanaCerts, namespace)
 	serverCert := newTestCert(config.ServerCerts, namespace)
 	// byo case for the alertmanager route
-	testAmRouteBYOCaSecret := newTestCert(config.AlertmanagerRouteBYOCAName, namespace)
-	testAmRouteBYOCertSecret := newTestCert(config.AlertmanagerRouteBYOCERTName, namespace)
+	testAmRouteBYOCaSecret := newTestCert(operatorsconfig.AlertmanagerRouteBYOCAName, namespace)
+	testAmRouteBYOCertSecret := newTestCert(operatorsconfig.AlertmanagerRouteBYOCERTName, namespace)
 	clustermgmtAddon := newClusterManagementAddon()
 
 	objs := []runtime.Object{mco, svc, serverCACerts, clientCACerts, grafanaCert, serverCert,
@@ -327,8 +328,8 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 	cl := fake.NewFakeClient(objs...)
 
 	// Create a ReconcileMemcached object with the scheme and fake client.
-	r := &MultiClusterObservabilityReconciler{Client: cl, Scheme: s, CRDMap: map[string]bool{config.IngressControllerCRD: true}}
-	config.SetMonitoringCRName(name)
+	r := &MultiClusterObservabilityReconciler{Client: cl, Scheme: s, CRDMap: map[string]bool{operatorsconfig.IngressControllerCRD: true}}
+	operatorsconfig.SetMonitoringCRName(name)
 	// Mock request to simulate Reconcile() being called on an event for a
 	// watched resource .
 	req := ctrl.Request{
@@ -586,7 +587,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 func TestImageReplaceForMCO(t *testing.T) {
 	var (
 		name      = "test-monitoring"
-		namespace = config.GetDefaultNamespace()
+		namespace = operatorsconfig.GetDefaultNamespace()
 		version   = "2.3.0"
 	)
 
@@ -640,7 +641,7 @@ func TestImageReplaceForMCO(t *testing.T) {
 	migrationv1alpha1.SchemeBuilder.AddToScheme(s)
 
 	observatoriumAPIsvc := createObservatoriumAPIService(name, namespace)
-	serverCACerts := newTestCert(config.ServerCACerts, namespace)
+	serverCACerts := newTestCert(operatorsconfig.ServerCACerts, namespace)
 	clientCACerts := newTestCert(config.ClientCACerts, namespace)
 	grafanaCert := newTestCert(config.GrafanaCerts, namespace)
 	serverCert := newTestCert(config.ServerCerts, namespace)
@@ -648,8 +649,8 @@ func TestImageReplaceForMCO(t *testing.T) {
 	testMCHInstance := newMCHInstanceWithVersion(config.GetMCONamespace(), version)
 	imageManifestsCM := newTestImageManifestsConfigMap(config.GetMCONamespace(), version)
 	// byo case for the alertmanager route
-	testAmRouteBYOCaSecret := newTestCert(config.AlertmanagerRouteBYOCAName, namespace)
-	testAmRouteBYOCertSecret := newTestCert(config.AlertmanagerRouteBYOCERTName, namespace)
+	testAmRouteBYOCaSecret := newTestCert(operatorsconfig.AlertmanagerRouteBYOCAName, namespace)
+	testAmRouteBYOCertSecret := newTestCert(operatorsconfig.AlertmanagerRouteBYOCERTName, namespace)
 	clustermgmtAddon := newClusterManagementAddon()
 
 	objs := []runtime.Object{mco, observatoriumAPIsvc, serverCACerts, clientCACerts, grafanaCert, serverCert,
@@ -658,19 +659,19 @@ func TestImageReplaceForMCO(t *testing.T) {
 	cl := fake.NewFakeClient(objs...)
 
 	// Create a ReconcileMemcached object with the scheme and fake client.
-	r := &MultiClusterObservabilityReconciler{Client: cl, Scheme: s, CRDMap: map[string]bool{config.MCHCrdName: true, config.IngressControllerCRD: true}}
-	config.SetMonitoringCRName(name)
+	r := &MultiClusterObservabilityReconciler{Client: cl, Scheme: s, CRDMap: map[string]bool{operatorsconfig.MCHCrdName: true, operatorsconfig.IngressControllerCRD: true}}
+	operatorsconfig.SetMonitoringCRName(name)
 
 	// Mock request to simulate Reconcile() being called on an event for a watched resource .
 	req := ctrl.Request{
 		NamespacedName: types.NamespacedName{
-			Name:      config.MCHUpdatedRequestName,
+			Name:      operatorsconfig.MCHUpdatedRequestName,
 			Namespace: config.GetMCONamespace(),
 		},
 	}
 
 	// set the image manifests map for testing
-	config.SetImageManifests(testImagemanifestsMap)
+	operatorsconfig.SetImageManifests(testImagemanifestsMap)
 
 	// trigger another reconcile for MCH update event
 	_, err = r.Reconcile(context.TODO(), req)
@@ -808,7 +809,7 @@ func TestCheckObjStorageStatus(t *testing.T) {
 		t.Errorf("check s3 conf failed: got %v, expected non-nil", mcoCondition)
 	}
 
-	err := c.Create(context.TODO(), createSecret("test", "test", config.GetDefaultNamespace()))
+	err := c.Create(context.TODO(), createSecret("test", "test", operatorsconfig.GetDefaultNamespace()))
 	if err != nil {
 		t.Fatalf("Failed to create secret: (%v)", err)
 	}
@@ -818,7 +819,7 @@ func TestCheckObjStorageStatus(t *testing.T) {
 		t.Errorf("check s3 conf failed: got %v, expected nil", mcoCondition)
 	}
 
-	updateSecret := createSecret("error", "test", config.GetDefaultNamespace())
+	updateSecret := createSecret("error", "test", operatorsconfig.GetDefaultNamespace())
 	updateSecret.ObjectMeta.ResourceVersion = "1"
 	err = c.Update(context.TODO(), updateSecret)
 	if err != nil {
@@ -850,8 +851,8 @@ func TestHandleStorageSizeChange(t *testing.T) {
 	mcov1beta2.SchemeBuilder.AddToScheme(s)
 	objs := []runtime.Object{
 		mco,
-		createStatefulSet(mco.Name, config.GetDefaultNamespace(), "test"),
-		createPersistentVolumeClaim(mco.Name, config.GetDefaultNamespace(), "test"),
+		createStatefulSet(mco.Name, operatorsconfig.GetDefaultNamespace(), "test"),
+		createPersistentVolumeClaim(mco.Name, operatorsconfig.GetDefaultNamespace(), "test"),
 	}
 	c := fake.NewFakeClient(objs...)
 	r := &MultiClusterObservabilityReconciler{Client: c, Scheme: s}
@@ -861,7 +862,7 @@ func TestHandleStorageSizeChange(t *testing.T) {
 	pvc := &corev1.PersistentVolumeClaim{}
 	err := c.Get(context.TODO(), types.NamespacedName{
 		Name:      "test",
-		Namespace: config.GetDefaultNamespace(),
+		Namespace: operatorsconfig.GetDefaultNamespace(),
 	}, pvc)
 
 	if err == nil {

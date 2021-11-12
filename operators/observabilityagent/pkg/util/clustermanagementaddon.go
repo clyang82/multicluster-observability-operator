@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	addonv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
 )
@@ -20,6 +21,8 @@ const (
 	ObservabilityController = "observability-controller"
 	grafanaLink             = "/grafana/d/2b679d600f3b9e7676a7c5ac3643d448/acm-clusters-overview"
 )
+
+var log = logf.Log.WithName("observabilityagent_util")
 
 type clusterManagementAddOnSpec struct {
 	DisplayName string `json:"displayName"`

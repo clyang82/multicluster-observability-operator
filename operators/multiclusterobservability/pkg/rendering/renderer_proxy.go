@@ -14,6 +14,8 @@ import (
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	opeartorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
@@ -55,31 +57,31 @@ func (r *MCORenderer) renderProxyDeployment(res *resource.Resource,
 	dep.Spec.Replicas = config.GetReplicas(config.RBACQueryProxy, r.cr.Spec.AdvancedConfig)
 
 	spec := &dep.Spec.Template.Spec
-	spec.Containers[0].ImagePullPolicy = mcoconfig.GetImagePullPolicy(r.cr.Spec)
+	spec.Containers[0].ImagePullPolicy = operatorsconfig.GetImagePullPolicy(r.cr.Spec)
 	args0 := spec.Containers[0].Args
 	for idx := range args0 {
-		args0[idx] = strings.Replace(args0[idx], "{{MCO_NAMESPACE}}", mcoconfig.GetDefaultNamespace(), 1)
+		args0[idx] = strings.Replace(args0[idx], "{{MCO_NAMESPACE}}", opeartorsconfig.GetDefaultNamespace(), 1)
 		args0[idx] = strings.Replace(args0[idx], "{{OBSERVATORIUM_NAME}}", mcoconfig.GetOperandName(mcoconfig.Observatorium), 1)
 	}
 	spec.Containers[0].Args = args0
 	spec.Containers[0].Resources = mcoconfig.GetResources(mcoconfig.RBACQueryProxy, r.cr.Spec.AdvancedConfig)
 
-	spec.Containers[1].ImagePullPolicy = mcoconfig.GetImagePullPolicy(r.cr.Spec)
+	spec.Containers[1].ImagePullPolicy = operatorsconfig.GetImagePullPolicy(r.cr.Spec)
 	args1 := spec.Containers[1].Args
 	for idx := range args1 {
-		args1[idx] = strings.Replace(args1[idx], "{{MCO_NAMESPACE}}", mcoconfig.GetDefaultNamespace(), 1)
+		args1[idx] = strings.Replace(args1[idx], "{{MCO_NAMESPACE}}", opeartorsconfig.GetDefaultNamespace(), 1)
 	}
 	spec.Containers[1].Args = args1
 	spec.NodeSelector = r.cr.Spec.NodeSelector
 	spec.Tolerations = r.cr.Spec.Tolerations
 	spec.ImagePullSecrets = []corev1.LocalObjectReference{
-		{Name: mcoconfig.GetImagePullSecret(r.cr.Spec)},
+		{Name: opeartorsconfig.GetImagePullSecret(r.cr.Spec)},
 	}
 
-	spec.Containers[0].Image = config.DefaultImgRepository + "/" + config.RBACQueryProxyImgName +
-		":" + config.DefaultImgTagSuffix
+	spec.Containers[0].Image = opeartorsconfig.DefaultImgRepository + "/" + config.RBACQueryProxyImgName +
+		":" + opeartorsconfig.DefaultImgTagSuffix
 	//replace the proxy image
-	found, image := mcoconfig.ReplaceImage(
+	found, image := opeartorsconfig.ReplaceImage(
 		r.cr.Annotations,
 		spec.Containers[0].Image,
 		mcoconfig.RBACQueryProxyKey)
@@ -89,7 +91,7 @@ func (r *MCORenderer) renderProxyDeployment(res *resource.Resource,
 
 	// the oauth-proxy image only exists in mch-image-manifest configmap
 	// pass nil annotation to make sure oauth-proxy overrided from mch-image-manifest
-	found, image = mcoconfig.ReplaceImage(nil, mcoconfig.OauthProxyImgRepo,
+	found, image = opeartorsconfig.ReplaceImage(nil, mcoconfig.OauthProxyImgRepo,
 		mcoconfig.OauthProxyKey)
 	if found {
 		spec.Containers[1].Image = image

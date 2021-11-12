@@ -20,6 +20,7 @@ import (
 	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	observatoriumv1alpha1 "github.com/open-cluster-management/observatorium-operator/api/v1alpha1"
 )
 
@@ -42,8 +43,8 @@ func TestNewDefaultObservatoriumSpec(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
-				mcoconfig.AnnotationKeyImageRepository: "quay.io:443/acm-d",
-				mcoconfig.AnnotationKeyImageTagSuffix:  "tag",
+				operatorsconfig.AnnotationKeyImageRepository: "quay.io:443/acm-d",
+				operatorsconfig.AnnotationKeyImageTagSuffix:  "tag",
 			},
 		},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
@@ -99,16 +100,16 @@ func TestMergeVolumeClaimTemplate(t *testing.T) {
 
 func TestNoUpdateObservatoriumCR(t *testing.T) {
 	var (
-		namespace = mcoconfig.GetDefaultNamespace()
+		namespace = operatorsconfig.GetDefaultNamespace()
 	)
 
 	// A MultiClusterObservability object with metadata and spec.
 	mco := &mcov1beta2.MultiClusterObservability{
 		TypeMeta: metav1.TypeMeta{Kind: "MultiClusterObservability"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mcoconfig.GetDefaultCRName(),
+			Name: operatorsconfig.GetDefaultCRName(),
 			Annotations: map[string]string{
-				mcoconfig.AnnotationKeyImageTagSuffix: "tag",
+				operatorsconfig.AnnotationKeyImageTagSuffix: "tag",
 			},
 		},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
@@ -150,7 +151,7 @@ func TestNoUpdateObservatoriumCR(t *testing.T) {
 	cl.Get(
 		context.TODO(),
 		types.NamespacedName{
-			Name:      mcoconfig.GetDefaultCRName(),
+			Name:      operatorsconfig.GetDefaultCRName(),
 			Namespace: namespace,
 		},
 		observatoriumCRFound,

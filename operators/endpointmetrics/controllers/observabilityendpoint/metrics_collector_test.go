@@ -13,14 +13,14 @@ import (
 
 	oashared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	addonv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
 )
 
 func getAllowlistCM() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.AllowlistConfigMapName,
+			Name:      operatorsconfig.AllowlistConfigMapName,
 			Namespace: namespace,
 		},
 		Data: map[string]string{
@@ -47,7 +47,7 @@ func init() {
 }
 
 func TestMetricsCollector(t *testing.T) {
-	hubInfo := &operatorconfig.HubInfo{
+	hubInfo := &operatorsconfig.HubInfo{
 		ClusterName:              "test-cluster",
 		ObservatoriumAPIEndpoint: "http://test-endpoint",
 	}

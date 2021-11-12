@@ -24,6 +24,7 @@ import (
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 )
@@ -68,8 +69,8 @@ func Start(c client.Client, ingressCtlCrdExists bool) {
 		log.Error(err, "Failed to create kube client")
 		os.Exit(1)
 	}
-	watchlist := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "secrets", config.GetDefaultNamespace(),
-		fields.OneTermEqualSelector("metadata.namespace", config.GetDefaultNamespace()))
+	watchlist := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "secrets", operatorsconfig.GetDefaultNamespace(),
+		fields.OneTermEqualSelector("metadata.namespace", operatorsconfig.GetDefaultNamespace()))
 	_, controller := cache.NewInformer(
 		watchlist,
 		&v1.Secret{},
@@ -88,15 +89,15 @@ func Start(c client.Client, ingressCtlCrdExists bool) {
 }
 
 func restartPods(c client.Client, s v1.Secret, isUpdate bool) {
-	if config.GetMonitoringCRName() == "" {
+	if operatorsconfig.GetMonitoringCRName() == "" {
 		return
 	}
 	dName := ""
-	if s.Name == config.ServerCACerts || s.Name == config.GrafanaCerts {
+	if s.Name == operatorsconfig.ServerCACerts || s.Name == config.GrafanaCerts {
 		dName = config.GetOperandName(config.RBACQueryProxy)
 	}
 	if s.Name == config.ClientCACerts || s.Name == config.ServerCerts {
-		dName = config.GetOperandName(config.ObservatoriumAPI)
+		dName = config.GetOperandName(operatorsconfig.ObservatoriumAPI)
 	}
 	if dName != "" {
 		updateDeployLabel(c, dName, isUpdate)
@@ -107,7 +108,7 @@ func updateDeployLabel(c client.Client, dName string, isUpdate bool) {
 	dep := &appv1.Deployment{}
 	err := c.Get(context.TODO(), types.NamespacedName{
 		Name:      dName,
-		Namespace: config.GetDefaultNamespace(),
+		Namespace: operatorsconfig.GetDefaultNamespace(),
 	}, dep)
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -166,7 +167,7 @@ func onDelete(c client.Client) func(obj interface{}) {
 		if util.Contains(caSecretNames, s.Name) {
 			mco := &mcov1beta2.MultiClusterObservability{}
 			err := c.Get(context.TODO(), types.NamespacedName{
-				Name: config.GetMonitoringCRName(),
+				Name: operatorsconfig.GetMonitoringCRName(),
 			}, mco)
 			if err == nil {
 				log.Info("secret for ca certificate deleted by mistake, add the cert back to the new created one", "name", s.Name)
@@ -175,7 +176,7 @@ func onDelete(c client.Client) func(obj interface{}) {
 					caSecret := &v1.Secret{}
 					err = c.Get(context.TODO(), types.NamespacedName{
 						Name:      s.Name,
-						Namespace: config.GetDefaultNamespace(),
+						Namespace: operatorsconfig.GetDefaultNamespace(),
 					}, caSecret)
 					if err == nil {
 						caSecret.Data["tls.crt"] = append(caSecret.Data["tls.crt"], s.Data["tls.crt"]...)

@@ -4,8 +4,6 @@
 package config
 
 import (
-	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
@@ -23,6 +21,7 @@ import (
 
 	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 var (
@@ -39,172 +38,10 @@ func TestGetClusterNameLabelKey(t *testing.T) {
 	}
 }
 
-func TestReplaceImage(t *testing.T) {
-
-	caseList := []struct {
-		annotations map[string]string
-		name        string
-		imageRepo   string
-		expected    bool
-		cm          map[string]string
-	}{
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-				"mco-test-image":             "test.org/test:latest",
-			},
-			name:      "Replace image for test purpose",
-			imageRepo: "test.org",
-			expected:  true,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-				AnnotationKeyImageTagSuffix:  "test",
-			},
-			name:      "Image is in different org",
-			imageRepo: "test.org",
-			expected:  false,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-			},
-			name:      "Image is in different org",
-			imageRepo: "test.org",
-			expected:  false,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-				AnnotationKeyImageTagSuffix:  "2.3.0-SNAPSHOT-2021-07-26-18-43-26",
-			},
-			name:      "Image is in the same org",
-			imageRepo: DefaultImgRepository,
-			expected:  true,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-			},
-			name:      "Image is in the same org",
-			imageRepo: DefaultImgRepository,
-			expected:  false,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-			},
-			name:      "Image is in the same org",
-			imageRepo: DefaultImgRepository,
-			expected:  true,
-			cm: map[string]string{
-				"test": "test.org",
-			},
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultDSImgRepository,
-				AnnotationKeyImageTagSuffix:  "2.3.0-SNAPSHOT-2021-07-26-18-43-26",
-			},
-			name:      "Image is from the ds build",
-			imageRepo: "test.org",
-			expected:  false,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultDSImgRepository,
-			},
-			name:      "Image is from the ds build",
-			imageRepo: "test.org",
-			expected:  true,
-			cm: map[string]string{
-				"test": "test.org",
-			},
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultDSImgRepository,
-			},
-			name:      "Image is from the ds build",
-			imageRepo: "test.org",
-			expected:  false,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: "",
-				AnnotationKeyImageTagSuffix:  "",
-			},
-			name:      "the img repo is empty",
-			imageRepo: "",
-			expected:  false,
-			cm:        nil,
-		},
-
-		{
-			annotations: map[string]string{},
-			name:        "no img info",
-			imageRepo:   "test.org",
-			expected:    false,
-			cm:          nil,
-		},
-
-		{
-			annotations: nil,
-			name:        "annotations is nil",
-			imageRepo:   "test.org",
-			expected:    false,
-			cm:          nil,
-		},
-	}
-
-	for _, c := range caseList {
-		t.Run(c.name, func(t *testing.T) {
-			SetImageManifests(c.cm)
-			output, _ := ReplaceImage(c.annotations, c.imageRepo, "test")
-			if output != c.expected {
-				t.Errorf("case (%v) output (%v) is not the expected (%v)", c.name, output, c.expected)
-			}
-		})
-	}
-}
-
 func TestGetDefaultTenantName(t *testing.T) {
 	tenantName := GetDefaultTenantName()
 	if tenantName != defaultTenantName {
 		t.Errorf("Tenant name (%v) is not the expected (%v)", tenantName, defaultTenantName)
-	}
-}
-
-func TestGetDefaultNamespace(t *testing.T) {
-	expected := "open-cluster-management-observability"
-	if GetDefaultNamespace() != expected {
-		t.Errorf("Default Namespace (%v) is not the expected (%v)", GetDefaultNamespace(), expected)
-	}
-}
-
-func TestMonitoringCRName(t *testing.T) {
-	var monitoringCR = "monitoring"
-	SetMonitoringCRName(monitoringCR)
-
-	if monitoringCR != GetMonitoringCRName() {
-		t.Errorf("Monitoring CR Name (%v) is not the expected (%v)", GetMonitoringCRName(), monitoringCR)
 	}
 }
 
@@ -276,53 +113,6 @@ func TestGetObsAPIHost(t *testing.T) {
 	}
 }
 
-func TestIsPaused(t *testing.T) {
-	caseList := []struct {
-		annotations map[string]string
-		expected    bool
-		name        string
-	}{
-		{
-			name: "without mco-pause",
-			annotations: map[string]string{
-				AnnotationKeyImageRepository: DefaultImgRepository,
-				AnnotationKeyImageTagSuffix:  "test",
-			},
-			expected: false,
-		},
-		{
-			name: "mco-pause is empty",
-			annotations: map[string]string{
-				AnnotationMCOPause: "",
-			},
-			expected: false,
-		},
-		{
-			name: "mco-pause is false",
-			annotations: map[string]string{
-				AnnotationMCOPause: "false",
-			},
-			expected: false,
-		},
-		{
-			name: "mco-pause is true",
-			annotations: map[string]string{
-				AnnotationMCOPause: "true",
-			},
-			expected: true,
-		},
-	}
-
-	for _, c := range caseList {
-		t.Run(c.name, func(t *testing.T) {
-			output := IsPaused(c.annotations)
-			if output != c.expected {
-				t.Errorf("case (%v) output (%v) is not the expected (%v)", c.name, output, c.expected)
-			}
-		})
-	}
-}
-
 func NewFakeClient(mco *mcov1beta2.MultiClusterObservability,
 	obs *observatoriumv1alpha1.Observatorium) client.Client {
 	s := scheme.Scheme
@@ -330,120 +120,6 @@ func NewFakeClient(mco *mcov1beta2.MultiClusterObservability,
 	s.AddKnownTypes(observatoriumv1alpha1.GroupVersion, obs)
 	objs := []runtime.Object{mco, obs}
 	return fake.NewFakeClientWithScheme(s, objs...)
-}
-
-func TestReadImageManifestConfigMap(t *testing.T) {
-	var buildTestImageManifestCM func(ns, version string) *corev1.ConfigMap
-	buildTestImageManifestCM = func(ns, version string) *corev1.ConfigMap {
-		return &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ImageManifestConfigMapNamePrefix + version,
-				Namespace: ns,
-				Labels: map[string]string{
-					OCMManifestConfigMapTypeLabelKey:    OCMManifestConfigMapTypeLabelValue,
-					OCMManifestConfigMapVersionLabelKey: version,
-				},
-			},
-			Data: map[string]string{
-				"test-key": fmt.Sprintf("test-value:%s", version),
-			},
-		}
-	}
-
-	ns := "testing"
-	scheme := runtime.NewScheme()
-	corev1.AddToScheme(scheme)
-
-	caseList := []struct {
-		name         string
-		inputCMList  []string
-		version      string
-		expectedData map[string]string
-		expectedRet  bool
-		preFunc      func()
-	}{
-		{
-			name:         "no image manifest configmap",
-			inputCMList:  []string{},
-			version:      "2.3.0",
-			expectedRet:  false,
-			expectedData: map[string]string{},
-			preFunc: func() {
-				os.Setenv("POD_NAMESPACE", ns)
-				SetImageManifests(map[string]string{})
-			},
-		},
-		{
-			name:         "single valid image manifest configmap",
-			inputCMList:  []string{"2.2.3"},
-			version:      "2.3.0",
-			expectedRet:  false,
-			expectedData: map[string]string{},
-			preFunc: func() {
-				os.Setenv("POD_NAMESPACE", ns)
-				SetImageManifests(map[string]string{})
-			},
-		},
-		{
-			name:        "multiple valid image manifest configmaps",
-			inputCMList: []string{"2.2.3", "2.3.0"},
-			version:     "2.3.0",
-			expectedRet: true,
-			expectedData: map[string]string{
-				"test-key": "test-value:2.3.0",
-			},
-			preFunc: func() {
-				os.Setenv("POD_NAMESPACE", ns)
-				SetImageManifests(map[string]string{})
-			},
-		},
-		{
-			name:        "multiple image manifest configmaps with invalid",
-			inputCMList: []string{"2.2.3", "2.3.0", "invalid"},
-			version:     "2.3.0",
-			expectedRet: true,
-			expectedData: map[string]string{
-				"test-key": "test-value:2.3.0",
-			},
-			preFunc: func() {
-				os.Setenv("POD_NAMESPACE", ns)
-				SetImageManifests(map[string]string{})
-			},
-		},
-		{
-			name:         "valid image manifest configmaps with no namespace set",
-			inputCMList:  []string{"2.2.3", "2.3.0"},
-			version:      "2.3.0",
-			expectedRet:  false,
-			expectedData: map[string]string{},
-			preFunc: func() {
-				os.Unsetenv("POD_NAMESPACE")
-				SetImageManifests(map[string]string{})
-			},
-		},
-	}
-
-	for _, c := range caseList {
-		t.Run(c.name, func(t *testing.T) {
-			c.preFunc()
-			initObjs := []runtime.Object{}
-			for _, cmName := range c.inputCMList {
-				initObjs = append(initObjs, buildTestImageManifestCM(ns, cmName))
-			}
-			client := fake.NewFakeClientWithScheme(scheme, initObjs...)
-
-			gotRet, err := ReadImageManifestConfigMap(client, c.version)
-			if err != nil {
-				t.Errorf("Failed read image manifest configmap due to %v", err)
-			}
-			if gotRet != c.expectedRet {
-				t.Errorf("case (%v) output (%v) is not the expected (%v)", c.name, gotRet, c.expectedRet)
-			}
-			if !reflect.DeepEqual(GetImageManifests(), c.expectedData) {
-				t.Errorf("case (%v) output (%v) is not the expected (%v)", c.name, GetImageManifests(), c.expectedData)
-			}
-		})
-	}
 }
 
 func Test_checkIsIBMCloud(t *testing.T) {
@@ -507,7 +183,7 @@ func TestGetResources(t *testing.T) {
 	}{
 		{
 			name:          "Have requests defined in resources",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Resources: &corev1.ResourceRequirements{
@@ -527,7 +203,7 @@ func TestGetResources(t *testing.T) {
 		},
 		{
 			name:          "Have limits defined in resources",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Resources: &corev1.ResourceRequirements{
@@ -567,7 +243,7 @@ func TestGetResources(t *testing.T) {
 		},
 		{
 			name:          "Have requests and limits defined in requests",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Resources: &corev1.ResourceRequirements{
@@ -591,7 +267,7 @@ func TestGetResources(t *testing.T) {
 		},
 		{
 			name:          "No CPU defined in requests",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Resources: &corev1.ResourceRequirements{
@@ -607,7 +283,7 @@ func TestGetResources(t *testing.T) {
 		},
 		{
 			name:          "No requests defined in resources",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Resources: &corev1.ResourceRequirements{},
@@ -621,7 +297,7 @@ func TestGetResources(t *testing.T) {
 		},
 		{
 			name:          "No resources defined",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{},
 			},
@@ -633,7 +309,7 @@ func TestGetResources(t *testing.T) {
 		},
 		{
 			name:          "No advanced defined",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw:           nil,
 			result: func(resources corev1.ResourceRequirements) bool {
 				return resources.Requests.Cpu().String() == ObservatoriumAPICPURequets &&
@@ -754,7 +430,7 @@ func TestGetReplicas(t *testing.T) {
 	}{
 		{
 			name:          "Have replicas defined",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Replicas: &Replicas1,
@@ -766,7 +442,7 @@ func TestGetReplicas(t *testing.T) {
 		},
 		{
 			name:          "Do not allow to set 0",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{
 					Replicas: &replicas0,
@@ -778,7 +454,7 @@ func TestGetReplicas(t *testing.T) {
 		},
 		{
 			name:          "No advanced defined",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw:           nil,
 			result: func(replicas *int32) bool {
 				return replicas == &Replicas2
@@ -786,7 +462,7 @@ func TestGetReplicas(t *testing.T) {
 		},
 		{
 			name:          "No replicas defined",
-			componentName: ObservatoriumAPI,
+			componentName: config.ObservatoriumAPI,
 			raw: &mcov1beta2.AdvancedConfig{
 				ObservatoriumAPI: &mcov1beta2.CommonSpec{},
 			},
@@ -800,72 +476,6 @@ func TestGetReplicas(t *testing.T) {
 			replicas := GetReplicas(c.componentName, c.raw)
 			if !c.result(replicas) {
 				t.Errorf("case (%v) output (%v) is not the expected", c.componentName+":"+c.name, replicas)
-			}
-		})
-	}
-}
-
-func TestGetOBAResources(t *testing.T) {
-	caseList := []struct {
-		name          string
-		componentName string
-		raw           *mcoshared.ObservabilityAddonSpec
-		result        func(resources corev1.ResourceRequirements) bool
-	}{
-		{
-			name:          "Have requests defined",
-			componentName: ObservatoriumAPI,
-			raw: &mcoshared.ObservabilityAddonSpec{
-				Resources: &corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1"),
-						corev1.ResourceMemory: resource.MustParse("1Gi"),
-					},
-				},
-			},
-			result: func(resources corev1.ResourceRequirements) bool {
-				return resources.Requests.Cpu().String() == "1" &&
-					resources.Requests.Memory().String() == "1Gi" &&
-					resources.Limits.Cpu().String() == "0" &&
-					resources.Limits.Memory().String() == "0"
-			},
-		},
-		{
-			name:          "Have limits defined",
-			componentName: ObservatoriumAPI,
-			raw: &mcoshared.ObservabilityAddonSpec{
-				Resources: &corev1.ResourceRequirements{
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU: resource.MustParse("1"),
-					},
-				},
-			},
-			result: func(resources corev1.ResourceRequirements) bool {
-				return resources.Requests.Cpu().String() == MetricsCollectorCPURequets &&
-					resources.Requests.Memory().String() == MetricsCollectorMemoryRequets &&
-					resources.Limits.Cpu().String() == "1" &&
-					resources.Limits.Memory().String() == "0"
-			},
-		},
-		{
-			name:          "no resources defined",
-			componentName: ObservatoriumAPI,
-			raw: &mcoshared.ObservabilityAddonSpec{
-				Resources: &corev1.ResourceRequirements{},
-			},
-			result: func(resources corev1.ResourceRequirements) bool {
-				return resources.Requests.Cpu().String() == MetricsCollectorCPURequets &&
-					resources.Requests.Memory().String() == MetricsCollectorMemoryRequets &&
-					resources.Limits.Cpu().String() == "0" &&
-					resources.Limits.Memory().String() == "0"
-			},
-		},
-	}
-	for _, c := range caseList {
-		t.Run(c.componentName+":"+c.name, func(t *testing.T) {
-			resources := GetOBAResources(c.raw)
-			if !c.result(*resources) {
-				t.Errorf("case (%v) output (%v) is not the expected", c.componentName+":"+c.name, resources)
 			}
 		})
 	}
@@ -897,7 +507,7 @@ func TestGetOperandName(t *testing.T) {
 				mco := &mcov1beta2.MultiClusterObservability{
 					TypeMeta: metav1.TypeMeta{Kind: "MultiClusterObservability"},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: GetDefaultCRName(),
+						Name: config.GetDefaultCRName(),
 					},
 					Spec: mcov1beta2.MultiClusterObservabilitySpec{
 						StorageConfig: &mcov1beta2.StorageConfig{
@@ -912,7 +522,7 @@ func TestGetOperandName(t *testing.T) {
 				observatorium := &observatoriumv1alpha1.Observatorium{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      GetOperandNamePrefix() + "-observatorium",
-						Namespace: GetDefaultNamespace(),
+						Namespace: config.GetDefaultNamespace(),
 					},
 				}
 
@@ -921,13 +531,13 @@ func TestGetOperandName(t *testing.T) {
 				mcov1beta2.SchemeBuilder.AddToScheme(s)
 				observatoriumv1alpha1.AddToScheme(s)
 				client := fake.NewFakeClientWithScheme(s, []runtime.Object{mco, observatorium}...)
-				SetMonitoringCRName(GetDefaultCRName())
+				config.SetMonitoringCRName(config.GetDefaultCRName())
 				SetOperandNames(client)
 			},
 			result: func() bool {
 				return GetOperandName(Alertmanager) == GetOperandNamePrefix()+Alertmanager &&
 					GetOperandName(Grafana) == GetOperandNamePrefix()+Grafana &&
-					GetOperandName(Observatorium) == GetDefaultCRName()
+					GetOperandName(Observatorium) == config.GetDefaultCRName()
 			},
 		},
 		{
@@ -939,7 +549,7 @@ func TestGetOperandName(t *testing.T) {
 				mco := &mcov1beta2.MultiClusterObservability{
 					TypeMeta: metav1.TypeMeta{Kind: "MultiClusterObservability"},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: GetDefaultCRName(),
+						Name: config.GetDefaultCRName(),
 					},
 					Spec: mcov1beta2.MultiClusterObservabilitySpec{
 						StorageConfig: &mcov1beta2.StorageConfig{
@@ -954,11 +564,11 @@ func TestGetOperandName(t *testing.T) {
 				observatorium := &observatoriumv1alpha1.Observatorium{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      GetOperandNamePrefix() + "observatorium",
-						Namespace: GetDefaultNamespace(),
+						Namespace: config.GetDefaultNamespace(),
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind: "MultiClusterObservability",
-								Name: GetDefaultCRName(),
+								Name: config.GetDefaultCRName(),
 							},
 						},
 					},
@@ -970,7 +580,7 @@ func TestGetOperandName(t *testing.T) {
 				observatoriumv1alpha1.AddToScheme(s)
 				client := fake.NewFakeClientWithScheme(s, []runtime.Object{mco, observatorium}...)
 
-				SetMonitoringCRName(GetDefaultCRName())
+				config.SetMonitoringCRName(config.GetDefaultCRName())
 				SetOperandNames(client)
 			},
 			result: func() bool {
@@ -988,7 +598,7 @@ func TestGetOperandName(t *testing.T) {
 				mco := &mcov1beta2.MultiClusterObservability{
 					TypeMeta: metav1.TypeMeta{Kind: "MultiClusterObservability"},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: GetDefaultCRName(),
+						Name: config.GetDefaultCRName(),
 					},
 					Spec: mcov1beta2.MultiClusterObservabilitySpec{
 						StorageConfig: &mcov1beta2.StorageConfig{
@@ -1002,12 +612,12 @@ func TestGetOperandName(t *testing.T) {
 
 				observatorium := &observatoriumv1alpha1.Observatorium{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      GetDefaultCRName(),
-						Namespace: GetDefaultNamespace(),
+						Name:      config.GetDefaultCRName(),
+						Namespace: config.GetDefaultNamespace(),
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind: "MultiClusterObservability",
-								Name: GetDefaultCRName(),
+								Name: config.GetDefaultCRName(),
 							},
 						},
 					},
@@ -1019,13 +629,13 @@ func TestGetOperandName(t *testing.T) {
 				observatoriumv1alpha1.AddToScheme(s)
 				client := fake.NewFakeClientWithScheme(s, []runtime.Object{mco, observatorium}...)
 
-				SetMonitoringCRName(GetDefaultCRName())
+				config.SetMonitoringCRName(config.GetDefaultCRName())
 				SetOperandNames(client)
 			},
 			result: func() bool {
 				return GetOperandName(Alertmanager) == GetOperandNamePrefix()+Alertmanager &&
 					GetOperandName(Grafana) == GetOperandNamePrefix()+Grafana &&
-					GetOperandName(Observatorium) == GetDefaultCRName()
+					GetOperandName(Observatorium) == config.GetDefaultCRName()
 			},
 		},
 	}

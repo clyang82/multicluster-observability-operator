@@ -21,7 +21,7 @@ import (
 
 	oashared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	addonv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
 )
 
@@ -57,12 +57,12 @@ func newPromSvc() *corev1.Service {
 func newHubInfoSecret(data []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.HubInfoSecretName,
+			Name:      operatorsconfig.HubInfoSecretName,
 			Namespace: testNamespace,
 		},
 		Data: map[string][]byte{
-			operatorconfig.HubInfoSecretKey: data,
-			operatorconfig.ClusterNameKey:   []byte("test-cluster"),
+			operatorsconfig.HubInfoSecretKey: data,
+			operatorsconfig.ClusterNameKey:   []byte("test-cluster"),
 		},
 	}
 }
@@ -94,11 +94,11 @@ func newClusterMonitoringConfigCM(configDataStr string) *corev1.ConfigMap {
 func newImagesCM() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.ImageConfigMap,
+			Name:      operatorsconfig.ImageConfigMap,
 			Namespace: testNamespace,
 		},
 		Data: map[string]string{
-			operatorconfig.MetricsCollectorKey: "metrics-collector-image",
+			operatorsconfig.MetricsCollectorKey: "metrics-collector-image",
 		},
 	}
 }

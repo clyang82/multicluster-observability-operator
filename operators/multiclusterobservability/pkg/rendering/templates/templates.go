@@ -12,7 +12,7 @@ import (
 )
 
 // *Templates contains all kustomize resources
-var genericTemplates, grafanaTemplates, alertManagerTemplates, thanosTemplates, proxyTemplates, endpointObservabilityTemplates, prometheusTemplates []*resource.Resource
+var genericTemplates, agentTemplates, grafanaTemplates, alertManagerTemplates, thanosTemplates, proxyTemplates, endpointObservabilityTemplates, prometheusTemplates []*resource.Resource
 
 // GetOrLoadGenericTemplates reads base manifest
 func GetOrLoadGenericTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
@@ -48,6 +48,21 @@ func GetOrLoadGrafanaTemplates(r *templates.TemplateRenderer) ([]*resource.Resou
 		return grafanaTemplates, err
 	}
 	return grafanaTemplates, nil
+}
+
+// GetOrLoadAgentTemplates reads the grafana manifests
+func GetOrLoadAgentTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
+	if len(agentTemplates) > 0 {
+		return agentTemplates, nil
+	}
+
+	basePath := path.Join(r.GetTemplatesPath(), "base")
+
+	// add grafana template
+	if err := r.AddTemplateFromPath(basePath+"/agent", &agentTemplates); err != nil {
+		return agentTemplates, err
+	}
+	return agentTemplates, nil
 }
 
 // GetOrLoadAlertManagerTemplates reads the alertmanager manifests

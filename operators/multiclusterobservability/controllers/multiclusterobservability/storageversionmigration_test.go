@@ -14,13 +14,13 @@ import (
 	migrationv1alpha1 "sigs.k8s.io/kube-storage-version-migrator/pkg/apis/migration/v1alpha1"
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 func TestCreateOrUpdateObservabilityStorageVersionMigrationResource(t *testing.T) {
 	var (
 		name      = "observability"
-		namespace = mcoconfig.GetDefaultNamespace()
+		namespace = operatorsconfig.GetDefaultNamespace()
 	)
 	mco := &mcov1beta2.MultiClusterObservability{
 		TypeMeta:   metav1.TypeMeta{Kind: "MultiClusterObservability"},
@@ -48,7 +48,7 @@ func TestCreateOrUpdateObservabilityStorageVersionMigrationResource(t *testing.T
 		Spec: migrationv1alpha1.StorageVersionMigrationSpec{
 			Resource: migrationv1alpha1.GroupVersionResource{
 				Group:    mcov1beta2.GroupVersion.Group,
-				Resource: mcoconfig.MCORsName,
+				Resource: operatorsconfig.MCORsName,
 			},
 		},
 	}

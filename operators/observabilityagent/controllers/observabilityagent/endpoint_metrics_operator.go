@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
-package placementrule
+package observabilityagent
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/kustomize/v3/pkg/resource"
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering/templates"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	templatesutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
@@ -52,7 +52,7 @@ func loadTemplates(mco *mcov1beta2.MultiClusterObservability) (
 		}
 		if r.GetKind() == "Deployment" {
 			dep = obj.(*appsv1.Deployment)
-		} else if r.GetKind() == "ConfigMap" && r.GetName() == operatorconfig.ImageConfigMap {
+		} else if r.GetKind() == "ConfigMap" && r.GetName() == operatorsconfig.ImageConfigMap {
 			imageListCM = obj.(*corev1.ConfigMap)
 		} else if r.GetKind() == "CustomResourceDefinition" {
 			if r.GetGvk().Version == "v1" {
@@ -98,7 +98,7 @@ func updateRes(r *resource.Resource,
 		imageSecrets := obj.(*corev1.ServiceAccount).ImagePullSecrets
 		for i, imageSecret := range imageSecrets {
 			if imageSecret.Name == "REPLACE_WITH_IMAGEPULLSECRET" {
-				imageSecrets[i].Name = mcoconfig.GetImagePullSecret(mco.Spec)
+				imageSecrets[i].Name = operatorsconfig.GetImagePullSecret(mco.Spec)
 				break
 			}
 		}
@@ -109,21 +109,21 @@ func updateRes(r *resource.Resource,
 		binding.Subjects[0].Namespace = spokeNameSpace
 	}
 	// set images for components in managed clusters
-	if r.GetKind() == "ConfigMap" && r.GetName() == operatorconfig.ImageConfigMap {
+	if r.GetKind() == "ConfigMap" && r.GetName() == operatorsconfig.ImageConfigMap {
 		images := obj.(*corev1.ConfigMap).Data
 		for key, _ := range images {
-			if key == operatorconfig.ConfigmapReloaderKey {
-				found, image := mcoconfig.ReplaceImage(
+			if key == operatorsconfig.ConfigmapReloaderKey {
+				found, image := operatorsconfig.ReplaceImage(
 					mco.Annotations,
-					mcoconfig.ConfigmapReloaderImgRepo+"/"+operatorconfig.ImageKeyNameMap[operatorconfig.ConfigmapReloaderKey],
+					operatorsconfig.ConfigmapReloaderImgRepo+"/"+operatorsconfig.ImageKeyNameMap[operatorsconfig.ConfigmapReloaderKey],
 					key)
 				if found {
 					obj.(*corev1.ConfigMap).Data[key] = image
 				}
 			} else {
-				found, image := mcoconfig.ReplaceImage(
+				found, image := operatorsconfig.ReplaceImage(
 					mco.Annotations,
-					mcoconfig.DefaultImgRepository+"/"+operatorconfig.ImageKeyNameMap[key],
+					operatorsconfig.DefaultImgRepository+"/"+operatorsconfig.ImageKeyNameMap[key],
 					key)
 				if found {
 					obj.(*corev1.ConfigMap).Data[key] = image
@@ -137,12 +137,12 @@ func updateRes(r *resource.Resource,
 
 func updateEndpointOperator(mco *mcov1beta2.MultiClusterObservability,
 	container corev1.Container) corev1.Container {
-	container.Image = getImage(mco, mcoconfig.EndpointControllerImgName,
-		mcoconfig.DefaultImgTagSuffix, mcoconfig.EndpointControllerKey)
-	container.ImagePullPolicy = mcoconfig.GetImagePullPolicy(mco.Spec)
+	container.Image = getImage(mco, config.EndpointControllerImgName,
+		operatorsconfig.DefaultImgTagSuffix, config.EndpointControllerKey)
+	container.ImagePullPolicy = operatorsconfig.GetImagePullPolicy(mco.Spec)
 	for i, env := range container.Env {
-		if env.Name == operatorconfig.PullSecret {
-			container.Env[i].Value = mcoconfig.GetImagePullSecret(mco.Spec)
+		if env.Name == operatorsconfig.PullSecret {
+			container.Env[i].Value = operatorsconfig.GetImagePullSecret(mco.Spec)
 		}
 	}
 	return container
@@ -150,9 +150,9 @@ func updateEndpointOperator(mco *mcov1beta2.MultiClusterObservability,
 
 func getImage(mco *mcov1beta2.MultiClusterObservability,
 	name, tag, key string) string {
-	image := mcoconfig.DefaultImgRepository +
+	image := operatorsconfig.DefaultImgRepository +
 		"/" + name + ":" + tag
-	found, replacedImage := mcoconfig.ReplaceImage(mco.Annotations, image, key)
+	found, replacedImage := operatorsconfig.ReplaceImage(mco.Annotations, image, key)
 	if found {
 		return replacedImage
 	}

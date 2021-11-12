@@ -28,6 +28,8 @@ import (
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
 
@@ -57,7 +59,7 @@ func GenerateObservatoriumCR(
 	observatoriumCR := &obsv1alpha1.Observatorium{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mcoconfig.GetOperandName(mcoconfig.Observatorium),
-			Namespace: mcoconfig.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 			Labels:    labels,
 		},
 		Spec: *newDefaultObservatoriumSpec(mco, storageClassSelected),
@@ -157,7 +159,7 @@ func GenerateAPIGatewayRoute(
 	apiGateway := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      obsAPIGateway,
-			Namespace: mcoconfig.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		},
 		Spec: routev1.RouteSpec{
 			Port: &routev1.RoutePort{
@@ -202,7 +204,7 @@ func newDefaultObservatoriumSpec(mco *mcov1beta2.MultiClusterObservability,
 
 	obs := &obsv1alpha1.ObservatoriumSpec{}
 	obs.SecurityContext = &v1.SecurityContext{}
-	obs.PullSecret = mcoconfig.GetImagePullSecret(mco.Spec)
+	obs.PullSecret = operatorsconfig.GetImagePullSecret(mco.Spec)
 	obs.NodeSelector = mco.Spec.NodeSelector
 	obs.Tolerations = mco.Spec.Tolerations
 	obs.API = newAPISpec(mco)
@@ -319,14 +321,14 @@ func newAPISpec(mco *mcov1beta2.MultiClusterObservability) obsv1alpha1.APISpec {
 	apiSpec.RBAC = newAPIRBAC()
 	apiSpec.Tenants = newAPITenants()
 	apiSpec.TLS = newAPITLS()
-	apiSpec.Replicas = mcoconfig.GetReplicas(mcoconfig.ObservatoriumAPI, mco.Spec.AdvancedConfig)
+	apiSpec.Replicas = mcoconfig.GetReplicas(operatorsconfig.ObservatoriumAPI, mco.Spec.AdvancedConfig)
 	if !mcoconfig.WithoutResourcesRequests(mco.GetAnnotations()) {
-		apiSpec.Resources = mcoconfig.GetResources(config.ObservatoriumAPI, mco.Spec.AdvancedConfig)
+		apiSpec.Resources = mcoconfig.GetResources(operatorsconfig.ObservatoriumAPI, mco.Spec.AdvancedConfig)
 	}
 	//set the default observatorium components' image
-	apiSpec.Image = mcoconfig.DefaultImgRepository + "/" + mcoconfig.ObservatoriumAPIImgName +
-		":" + mcoconfig.DefaultImgTagSuffix
-	replace, image := mcoconfig.ReplaceImage(mco.Annotations, apiSpec.Image, mcoconfig.ObservatoriumAPIImgName)
+	apiSpec.Image = operatorsconfig.DefaultImgRepository + "/" + mcoconfig.ObservatoriumAPIImgName +
+		":" + operatorsconfig.DefaultImgTagSuffix
+	replace, image := operatorsconfig.ReplaceImage(mco.Annotations, apiSpec.Image, mcoconfig.ObservatoriumAPIImgName)
 	if replace {
 		apiSpec.Image = image
 	}
@@ -390,10 +392,10 @@ func newRuleSpec(mco *mcov1beta2.MultiClusterObservability, scSelected string) o
 		}
 	}
 
-	ruleSpec.ReloaderImage = mcoconfig.ConfigmapReloaderImgRepo + "/" +
-		mcoconfig.ConfigmapReloaderImgName + ":" + mcoconfig.ConfigmapReloaderImgTagSuffix
-	found, reloaderImage := mcoconfig.ReplaceImage(mco.Annotations,
-		mcoconfig.ConfigmapReloaderImgRepo, mcoconfig.ConfigmapReloaderKey)
+	ruleSpec.ReloaderImage = operatorsconfig.ConfigmapReloaderImgRepo + "/" +
+		operatorsconfig.ConfigmapReloaderImgName + ":" + operatorsconfig.ConfigmapReloaderImgTagSuffix
+	found, reloaderImage := operatorsconfig.ReplaceImage(mco.Annotations,
+		operatorsconfig.ConfigmapReloaderImgRepo, operatorsconfig.ConfigmapReloaderKey)
 	if found {
 		ruleSpec.ReloaderImage = reloaderImage
 	}
@@ -486,12 +488,12 @@ func newMemCacheSpec(component string, mco *mcov1beta2.MultiClusterObservability
 		memCacheSpec.ExporterResources = mcoconfig.GetResources(mcoconfig.MemcachedExporter, mco.Spec.AdvancedConfig)
 	}
 
-	found, image := mcoconfig.ReplaceImage(mco.Annotations, memCacheSpec.Image, mcoconfig.MemcachedImgName)
+	found, image := operatorsconfig.ReplaceImage(mco.Annotations, memCacheSpec.Image, mcoconfig.MemcachedImgName)
 	if found {
 		memCacheSpec.Image = image
 	}
 
-	found, image = mcoconfig.ReplaceImage(mco.Annotations, memCacheSpec.ExporterImage, mcoconfig.MemcachedExporterKey)
+	found, image = operatorsconfig.ReplaceImage(mco.Annotations, memCacheSpec.ExporterImage, mcoconfig.MemcachedExporterKey)
 	if found {
 		memCacheSpec.ExporterImage = image
 	}
@@ -516,8 +518,8 @@ func newMemCacheSpec(component string, mco *mcov1beta2.MultiClusterObservability
 
 func newThanosSpec(mco *mcov1beta2.MultiClusterObservability, scSelected string) obsv1alpha1.ThanosSpec {
 	thanosSpec := obsv1alpha1.ThanosSpec{}
-	thanosSpec.Image = mcoconfig.DefaultImgRepository + "/" + mcoconfig.ThanosImgName +
-		":" + mcoconfig.DefaultImgTagSuffix
+	thanosSpec.Image = operatorsconfig.DefaultImgRepository + "/" + mcoconfig.ThanosImgName +
+		":" + operatorsconfig.DefaultImgTagSuffix
 
 	thanosSpec.Compact = newCompactSpec(mco, scSelected)
 	thanosSpec.Receivers = newReceiversSpec(mco, scSelected)
@@ -527,7 +529,7 @@ func newThanosSpec(mco *mcov1beta2.MultiClusterObservability, scSelected string)
 	thanosSpec.Query = newQuerySpec(mco)
 	thanosSpec.QueryFrontend = newQueryFrontendSpec(mco)
 
-	replace, image := mcoconfig.ReplaceImage(mco.Annotations, thanosSpec.Image, mcoconfig.ThanosImgName)
+	replace, image := operatorsconfig.ReplaceImage(mco.Annotations, thanosSpec.Image, mcoconfig.ThanosImgName)
 	if replace {
 		thanosSpec.Image = image
 	}
@@ -571,7 +573,7 @@ func newReceiverControllerSpec(mco *mcov1beta2.MultiClusterObservability) obsv1a
 			},
 		}
 	}
-	replace, image := mcoconfig.ReplaceImage(mco.Annotations, receiveControllerSpec.Image,
+	replace, image := operatorsconfig.ReplaceImage(mco.Annotations, receiveControllerSpec.Image,
 		mcoconfig.ThanosReceiveControllerKey)
 	if replace {
 		receiveControllerSpec.Image = image
@@ -656,7 +658,7 @@ func deleteStoreSts(cl client.Client, name string, oldNum int32, newNum int32) e
 		for i := newNum; i < oldNum; i++ {
 			stsName := fmt.Sprintf("%s-thanos-store-shard-%d", name, i)
 			found := &appsv1.StatefulSet{}
-			err := cl.Get(context.TODO(), types.NamespacedName{Name: stsName, Namespace: mcoconfig.GetDefaultNamespace()}, found)
+			err := cl.Get(context.TODO(), types.NamespacedName{Name: stsName, Namespace: operatorsconfig.GetDefaultNamespace()}, found)
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					log.Error(err, "Failed to get statefulset", "name", stsName)

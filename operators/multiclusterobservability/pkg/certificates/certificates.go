@@ -26,12 +26,13 @@ import (
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
 
 const (
 	serverCACertifcateCN = "observability-server-ca-certificate"
-	serverCACerts        = config.ServerCACerts
+	serverCACerts        = operatorsconfig.ServerCACerts
 	serverCertificateCN  = config.ServerCertCN
 	serverCerts          = config.ServerCerts
 
@@ -81,7 +82,7 @@ func createCASecret(c client.Client,
 		log.Info("To renew CA certificates", "name", name)
 	}
 	caSecret := &corev1.Secret{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: config.GetDefaultNamespace(), Name: name}, caSecret)
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: operatorsconfig.GetDefaultNamespace(), Name: name}, caSecret)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "Failed to check ca secret", "name", name)
@@ -95,7 +96,7 @@ func createCASecret(c client.Client,
 			caSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
-					Namespace: config.GetDefaultNamespace(),
+					Namespace: operatorsconfig.GetDefaultNamespace(),
 				},
 				Data: map[string][]byte{
 					"ca.crt":  certPEM.Bytes(),
@@ -190,7 +191,7 @@ func createCertSecret(c client.Client,
 		log.Info("To renew certificates", "name", name)
 	}
 	crtSecret := &corev1.Secret{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: config.GetDefaultNamespace(), Name: name}, crtSecret)
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: operatorsconfig.GetDefaultNamespace(), Name: name}, crtSecret)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "Failed to check certificate secret", "name", name)
@@ -208,7 +209,7 @@ func createCertSecret(c client.Client,
 			crtSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
-					Namespace: config.GetDefaultNamespace(),
+					Namespace: operatorsconfig.GetDefaultNamespace(),
 				},
 				Data: map[string][]byte{
 					"ca.crt":  caCertBytes,
@@ -340,7 +341,7 @@ func getCA(c client.Client, isServer bool) (*x509.Certificate, *rsa.PrivateKey, 
 		caCertName = clientCACerts
 	}
 	caSecret := &corev1.Secret{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: config.GetDefaultNamespace(), Name: caCertName}, caSecret)
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: operatorsconfig.GetDefaultNamespace(), Name: caCertName}, caSecret)
 	if err != nil {
 		log.Error(err, "Failed to get ca secret", "name", caCertName)
 		return nil, nil, nil, err
@@ -363,7 +364,7 @@ func getCA(c client.Client, isServer bool) (*x509.Certificate, *rsa.PrivateKey, 
 
 func removeExpiredCA(c client.Client, name string) {
 	caSecret := &corev1.Secret{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: config.GetDefaultNamespace(), Name: name}, caSecret)
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: operatorsconfig.GetDefaultNamespace(), Name: name}, caSecret)
 	if err != nil {
 		log.Error(err, "Failed to get ca secret", "name", name)
 		return
@@ -430,7 +431,7 @@ func pemEncode(cert []byte, key []byte) (*bytes.Buffer, *bytes.Buffer) {
 func getHosts(c client.Client, ingressCtlCrdExists bool) ([]string, error) {
 	hosts := []string{config.GetObsAPISvc(config.GetOperandName(config.Observatorium))}
 	if ingressCtlCrdExists {
-		url, err := config.GetObsAPIHost(c, config.GetDefaultNamespace())
+		url, err := config.GetObsAPIHost(c, operatorsconfig.GetDefaultNamespace())
 		if err != nil {
 			log.Error(err, "Failed to get api route address")
 			return nil, err

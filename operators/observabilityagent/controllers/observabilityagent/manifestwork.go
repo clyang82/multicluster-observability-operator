@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
-package placementrule
+package observabilityagent
 
 import (
 	"context"
@@ -25,8 +25,8 @@ import (
 	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	workv1 "open-cluster-management.io/api/work/v1"
 )
@@ -218,7 +218,7 @@ func generateGlobalManifestResources(c client.Client, mco *mcov1beta2.MultiClust
 	// inject the image pull secret
 	if pullSecret == nil {
 		var err error
-		if pullSecret, err = generatePullSecret(c, config.GetImagePullSecret(mco.Spec)); err != nil {
+		if pullSecret, err = generatePullSecret(c, operatorsconfig.GetImagePullSecret(mco.Spec)); err != nil {
 			return nil, nil, nil, err
 		}
 	}
@@ -313,7 +313,7 @@ func createManifestWorks(c client.Client, restMapper meta.RESTMapper,
 				if env.Name == "HUB_NAMESPACE" {
 					container.Env[j].Value = clusterNamespace
 				}
-				if env.Name == operatorconfig.InstallPrometheus {
+				if env.Name == operatorsconfig.InstallPrometheus {
 					container.Env[j].Value = strconv.FormatBool(installProm)
 				}
 			}
@@ -336,7 +336,7 @@ func createManifestWorks(c client.Client, restMapper meta.RESTMapper,
 		customPullSecret, err := imageRegistryClient.Cluster(clusterName).PullSecret()
 		if err == nil && customPullSecret != nil {
 			customPullSecret.ResourceVersion = ""
-			customPullSecret.Name = config.GetImagePullSecret(mco.Spec)
+			customPullSecret.Name = operatorsconfig.GetImagePullSecret(mco.Spec)
 			customPullSecret.Namespace = spokeNameSpace
 			manifests = injectIntoWork(manifests, customPullSecret)
 		}
@@ -362,7 +362,7 @@ func createManifestWorks(c client.Client, restMapper meta.RESTMapper,
 	}
 
 	// inject the hub info secret
-	hubInfo.Data[operatorconfig.ClusterNameKey] = []byte(clusterName)
+	hubInfo.Data[operatorsconfig.ClusterNameKey] = []byte(clusterName)
 	manifests = injectIntoWork(manifests, hubInfo)
 
 	work.Spec.Workload.Manifests = manifests
@@ -375,7 +375,7 @@ func createManifestWorks(c client.Client, restMapper meta.RESTMapper,
 func generateAmAccessorTokenSecret(client client.Client) (*corev1.Secret, error) {
 	amAccessorSA := &corev1.ServiceAccount{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerAccessorSAName,
-		Namespace: config.GetDefaultNamespace()}, amAccessorSA)
+		Namespace: operatorsconfig.GetDefaultNamespace()}, amAccessorSA)
 	if err != nil {
 		log.Error(err, "Failed to get Alertmanager accessor serviceaccount", "name", config.AlertmanagerAccessorSAName)
 		return nil, err
@@ -396,7 +396,7 @@ func generateAmAccessorTokenSecret(client client.Client) (*corev1.Secret, error)
 
 	tokenSrt := &corev1.Secret{}
 	err = client.Get(context.TODO(), types.NamespacedName{Name: tokenSrtName,
-		Namespace: config.GetDefaultNamespace()}, tokenSrt)
+		Namespace: operatorsconfig.GetDefaultNamespace()}, tokenSrt)
 	if err != nil {
 		log.Error(err, "Failed to get token secret for Alertmanager accessor serviceaccount", "name", tokenSrtName)
 		return nil, err
@@ -423,7 +423,7 @@ func generatePullSecret(c client.Client, name string) (*corev1.Secret, error) {
 	err := c.Get(context.TODO(),
 		types.NamespacedName{
 			Name:      name,
-			Namespace: config.GetDefaultNamespace(),
+			Namespace: operatorsconfig.GetDefaultNamespace(),
 		}, imagePullSecret)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -452,8 +452,8 @@ func generatePullSecret(c client.Client, name string) (*corev1.Secret, error) {
 // generateObservabilityServerCACerts generates the certificate for managed cluster
 func generateObservabilityServerCACerts(client client.Client) (*corev1.Secret, error) {
 	ca := &corev1.Secret{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: config.ServerCACerts,
-		Namespace: config.GetDefaultNamespace()}, ca)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: operatorsconfig.ServerCACerts,
+		Namespace: operatorsconfig.GetDefaultNamespace()}, ca)
 	if err != nil {
 		return nil, err
 	}
@@ -481,15 +481,15 @@ func generateMetricsListCM(client client.Client) (*corev1.ConfigMap, error) {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.AllowlistConfigMapName,
+			Name:      operatorsconfig.AllowlistConfigMapName,
 			Namespace: spokeNameSpace,
 		},
 		Data: map[string]string{},
 	}
 
-	allowlist, err := getAllowList(client, operatorconfig.AllowlistConfigMapName)
+	allowlist, err := getAllowList(client, operatorsconfig.AllowlistConfigMapName)
 	if err != nil {
-		log.Error(err, "Failed to get metrics allowlist configmap "+operatorconfig.AllowlistConfigMapName)
+		log.Error(err, "Failed to get metrics allowlist configmap "+operatorsconfig.AllowlistConfigMapName)
 		return nil, err
 	}
 
@@ -518,7 +518,7 @@ func getAllowList(client client.Client, name string) (*MetricsAllowlist, error) 
 	found := &corev1.ConfigMap{}
 	namespacedName := types.NamespacedName{
 		Name:      name,
-		Namespace: config.GetDefaultNamespace(),
+		Namespace: operatorsconfig.GetDefaultNamespace(),
 	}
 	err := client.Get(context.TODO(), namespacedName, found)
 	if err != nil {

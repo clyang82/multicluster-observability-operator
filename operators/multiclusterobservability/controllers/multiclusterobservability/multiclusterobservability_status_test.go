@@ -12,6 +12,7 @@ import (
 	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -194,12 +195,12 @@ func TestFindStatusCondition(t *testing.T) {
 }
 
 func TestStartStatusUpdate(t *testing.T) {
-	mcoconfig.SetMonitoringCRName("observability")
+	operatorsconfig.SetMonitoringCRName("observability")
 	// A MultiClusterObservability object with metadata and spec.
 	mco := &mcov1beta2.MultiClusterObservability{
 		TypeMeta: metav1.TypeMeta{Kind: "MultiClusterObservability"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mcoconfig.GetMonitoringCRName(),
+			Name: operatorsconfig.GetMonitoringCRName(),
 		},
 		Spec: mcov1beta2.MultiClusterObservabilitySpec{
 			StorageConfig: &mcov1beta2.StorageConfig{
@@ -237,7 +238,7 @@ func TestStartStatusUpdate(t *testing.T) {
 
 	instance := &mcov1beta2.MultiClusterObservability{}
 	_ = cl.Get(context.TODO(), types.NamespacedName{
-		Name: mcoconfig.GetMonitoringCRName(),
+		Name: operatorsconfig.GetMonitoringCRName(),
 	}, instance)
 
 	if findStatusCondition(instance.Status.Conditions, "Installing") == nil {
@@ -257,7 +258,7 @@ func TestStartStatusUpdate(t *testing.T) {
 
 	instance = &mcov1beta2.MultiClusterObservability{}
 	_ = cl.Get(context.TODO(), types.NamespacedName{
-		Name: mcoconfig.GetMonitoringCRName(),
+		Name: operatorsconfig.GetMonitoringCRName(),
 	}, instance)
 
 	if findStatusCondition(instance.Status.Conditions, "MetricsDisabled") != nil {

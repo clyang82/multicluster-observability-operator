@@ -15,7 +15,7 @@ import (
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
 
-func (r *MCORenderer) newGranfanaRenderer() {
+func (r *MCORenderer) newAgentRenderer() {
 	r.renderGrafanaFns = map[string]rendererutil.RenderFn{
 		"Deployment":            r.renderGrafanaDeployments,
 		"Service":               r.renderer.RenderNamespace,
@@ -31,7 +31,7 @@ func (r *MCORenderer) newGranfanaRenderer() {
 	}
 }
 
-func (r *MCORenderer) renderGrafanaDeployments(res *resource.Resource,
+func (r *MCORenderer) renderAgentDeployments(res *resource.Resource,
 	namespace string, labels map[string]string) (*unstructured.Unstructured, error) {
 	u, err := r.renderer.RenderDeployments(res, namespace, labels)
 	if err != nil {
@@ -44,26 +44,17 @@ func (r *MCORenderer) renderGrafanaDeployments(res *resource.Resource,
 		return nil, err
 	}
 	dep := obj.(*v1.Deployment)
-	dep.Name = config.GetOperandName(config.Grafana)
-	dep.Spec.Replicas = config.GetReplicas(config.Grafana, r.cr.Spec.AdvancedConfig)
+	dep.Name = config.GetOperandName(config.AgentOperator)
 
 	spec := &dep.Spec.Template.Spec
 
-	spec.Containers[0].Image = operatorsconfig.DefaultImgRepository + "/" + config.GrafanaImgKey +
+	spec.Containers[0].Image = operatorsconfig.DefaultImgRepository + "/" + config.AgentImgKey +
 		":" + operatorsconfig.DefaultImgTagSuffix
-	found, image := operatorsconfig.ReplaceImage(r.cr.Annotations, spec.Containers[0].Image, config.GrafanaImgKey)
+	found, image := operatorsconfig.ReplaceImage(r.cr.Annotations, spec.Containers[0].Image, config.AgentImgKey)
 	if found {
 		spec.Containers[0].Image = image
 	}
-	spec.Containers[0].Resources = config.GetResources(config.Grafana, r.cr.Spec.AdvancedConfig)
-
-	spec.Containers[1].Image = operatorsconfig.DefaultImgRepository + "/" + config.GrafanaDashboardLoaderName +
-		":" + operatorsconfig.DefaultImgTagSuffix
-	found, image = operatorsconfig.ReplaceImage(r.cr.Annotations, spec.Containers[1].Image,
-		config.GrafanaDashboardLoaderKey)
-	if found {
-		spec.Containers[1].Image = image
-	}
+	spec.Containers[0].Resources = config.GetResources(config.AgentOperator, r.cr.Spec.AdvancedConfig)
 
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 	if err != nil {
@@ -73,11 +64,11 @@ func (r *MCORenderer) renderGrafanaDeployments(res *resource.Resource,
 	return &unstructured.Unstructured{Object: unstructuredObj}, nil
 }
 
-func (r *MCORenderer) renderGrafanaTemplates(templates []*resource.Resource,
+func (r *MCORenderer) renderAgentTemplates(templates []*resource.Resource,
 	namespace string, labels map[string]string) ([]*unstructured.Unstructured, error) {
 	uobjs := []*unstructured.Unstructured{}
 	for _, template := range templates {
-		render, ok := r.renderGrafanaFns[template.GetKind()]
+		render, ok := r.renderAgentFns[template.GetKind()]
 		if !ok {
 			uobjs = append(uobjs, &unstructured.Unstructured{Object: template.Map()})
 			continue

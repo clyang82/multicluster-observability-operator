@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
 	templatesutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
 )
@@ -22,7 +22,7 @@ import (
 func getAllowlistCM() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.AllowlistConfigMapName,
+			Name:      operatorsconfig.AllowlistConfigMapName,
 			Namespace: namespace,
 		},
 		Data: map[string]string{
@@ -43,7 +43,7 @@ func TestRender(t *testing.T) {
 	defer os.Unsetenv(templatesutil.TemplatesPathEnvVar)
 
 	renderer := rendererutil.NewRenderer()
-	hubInfo := &operatorconfig.HubInfo{
+	hubInfo := &operatorsconfig.HubInfo{
 		ClusterName:              "foo",
 		ObservatoriumAPIEndpoint: "testing.com",
 		AlertmanagerEndpoint:     "testing.com",

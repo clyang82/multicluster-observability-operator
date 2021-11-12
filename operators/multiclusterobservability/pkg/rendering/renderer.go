@@ -15,8 +15,9 @@ import (
 
 	obv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
-	mcoconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering/templates"
+	opeartorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
 	templatesutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
@@ -27,6 +28,7 @@ var log = logf.Log.WithName("renderer")
 type MCORenderer struct {
 	renderer              *rendererutil.Renderer
 	cr                    *obv1beta2.MultiClusterObservability
+	renderAgentFns        map[string]rendererutil.RenderFn
 	renderGrafanaFns      map[string]rendererutil.RenderFn
 	renderAlertManagerFns map[string]rendererutil.RenderFn
 	renderThanosFns       map[string]rendererutil.RenderFn
@@ -51,7 +53,7 @@ func (r *MCORenderer) Render() ([]*unstructured.Unstructured, error) {
 	if err != nil {
 		return nil, err
 	}
-	namespace := mcoconfig.GetDefaultNamespace()
+	namespace := operatorsconfig.GetDefaultNamespace()
 	labels := map[string]string{
 		config.GetCrLabelKey(): r.cr.Name,
 	}
@@ -59,6 +61,17 @@ func (r *MCORenderer) Render() ([]*unstructured.Unstructured, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// load and render agent templates
+	agentTemplates, err := templates.GetOrLoadAgentTemplates(templatesutil.GetTemplateRenderer())
+	if err != nil {
+		return nil, err
+	}
+	agentResources, err := r.renderAgentTemplates(agentTemplates, namespace, labels)
+	if err != nil {
+		return nil, err
+	}
+	resources = append(resources, agentResources...)
 
 	// load and render grafana templates
 	grafanaTemplates, err := templates.GetOrLoadGrafanaTemplates(templatesutil.GetTemplateRenderer())
@@ -118,25 +131,25 @@ func (r *MCORenderer) Render() ([]*unstructured.Unstructured, error) {
 			dep.Spec.Template.ObjectMeta.Labels[crLabelKey] = r.cr.Name
 
 			spec := &dep.Spec.Template.Spec
-			spec.Containers[0].ImagePullPolicy = mcoconfig.GetImagePullPolicy(r.cr.Spec)
+			spec.Containers[0].ImagePullPolicy = operatorsconfig.GetImagePullPolicy(r.cr.Spec)
 			spec.NodeSelector = r.cr.Spec.NodeSelector
 			spec.Tolerations = r.cr.Spec.Tolerations
 			spec.ImagePullSecrets = []corev1.LocalObjectReference{
-				{Name: mcoconfig.GetImagePullSecret(r.cr.Spec)},
+				{Name: operatorsconfig.GetImagePullSecret(r.cr.Spec)},
 			}
 
 			switch resources[idx].GetName() {
 
 			case "observatorium-operator":
-				spec.Containers[0].Image = mcoconfig.DefaultImgRepository + "/" +
-					mcoconfig.ObservatoriumOperatorImgName + ":" + mcoconfig.DefaultImgTagSuffix
+				spec.Containers[0].Image = opeartorsconfig.DefaultImgRepository + "/" +
+					config.ObservatoriumOperatorImgName + ":" + opeartorsconfig.DefaultImgTagSuffix
 
-				found, image := mcoconfig.ReplaceImage(r.cr.Annotations, spec.Containers[0].Image,
-					mcoconfig.ObservatoriumOperatorImgKey)
+				found, image := opeartorsconfig.ReplaceImage(r.cr.Annotations, spec.Containers[0].Image,
+					config.ObservatoriumOperatorImgKey)
 				if found {
 					spec.Containers[0].Image = image
 				}
-				dep.Name = mcoconfig.GetOperandName(config.ObservatoriumOperator)
+				dep.Name = config.GetOperandName(config.ObservatoriumOperator)
 
 			}
 
@@ -162,6 +175,6 @@ func (r *MCORenderer) renderMutatingWebhookConfiguration(res *resource.Resource)
 	clientConfig := webhook["clientConfig"].(map[string]interface{})
 	service := clientConfig["service"].(map[string]interface{})
 
-	service["namespace"] = mcoconfig.GetDefaultNamespace()
+	service["namespace"] = operatorsconfig.GetDefaultNamespace()
 	return u, nil
 }

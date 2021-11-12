@@ -25,42 +25,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 const (
-	crLabelKey                        = "observability.open-cluster-management.io/name"
-	clusterNameLabelKey               = "cluster"
-	obsAPIGateway                     = "observatorium-api"
-	infrastructureConfigName          = "cluster"
-	defaultMCONamespace               = "open-cluster-management"
-	defaultNamespace                  = "open-cluster-management-observability"
-	defaultTenantName                 = "default"
-	defaultCRName                     = "observability"
-	operandNamePrefix                 = "observability-"
-	OpenshiftIngressOperatorNamespace = "openshift-ingress-operator"
-	OpenshiftIngressNamespace         = "openshift-ingress"
-	OpenshiftIngressOperatorCRName    = "default"
-	OpenshiftIngressDefaultCertName   = "router-certs-default"
-	OpenshiftIngressRouteCAName       = "router-ca"
-
-	AnnotationKeyImageRepository          = "mco-imageRepository"
-	AnnotationKeyImageTagSuffix           = "mco-imageTagSuffix"
-	AnnotationMCOPause                    = "mco-pause"
-	AnnotationMCOWithoutResourcesRequests = "mco-thanos-without-resources-requests"
-	AnnotationCertDuration                = "mco-cert-duration"
-
-	MCHUpdatedRequestName               = "mch-updated-request"
-	MCOUpdatedRequestName               = "mco-updated-request"
-	ImageManifestConfigMapNamePrefix    = "mch-image-manifest-"
-	OCMManifestConfigMapTypeLabelKey    = "ocm-configmap-type"
-	OCMManifestConfigMapTypeLabelValue  = "image-manifest"
-	OCMManifestConfigMapVersionLabelKey = "ocm-release-version"
+	crLabelKey               = "observability.open-cluster-management.io/name"
+	clusterNameLabelKey      = "cluster"
+	obsAPIGateway            = "observatorium-api"
+	infrastructureConfigName = "cluster"
+	defaultTenantName        = "default"
+	operandNamePrefix        = "observability-"
 
 	ComponentVersion = "COMPONENT_VERSION"
 
-	ServerCACerts    = "observability-server-ca-certs"
 	ClientCACerts    = "observability-client-ca-certs"
 	ServerCerts      = "observability-server-certs"
 	ServerCertCN     = "observability-server-certificate"
@@ -68,13 +46,8 @@ const (
 	GrafanaCN        = "grafana"
 	ManagedClusterOU = "acm"
 
-	AlertmanagerAccessorSAName = "observability-alertmanager-accessor"
-	/* #nosec */
-	AlertmanagerAccessorSecretName = "observability-alertmanager-accessor"
-	AlertmanagerServiceName        = "alertmanager"
-	AlertmanagerRouteName          = "alertmanager"
-	AlertmanagerRouteBYOCAName     = "alertmanager-byo-ca"
-	AlertmanagerRouteBYOCERTName   = "alertmanager-byo-cert"
+	AlertmanagerServiceName = "alertmanager"
+	AlertmanagerRouteName   = "alertmanager"
 
 	AlertRuleDefaultConfigMapName = "thanos-ruler-default-rules"
 	AlertRuleDefaultFileKey       = "default_rules.yaml"
@@ -89,8 +62,6 @@ const (
 	AlertmanagersDefaultCaBundleName      = "alertmanager-ca-bundle"
 	AlertmanagersDefaultCaBundleKey       = "service-ca.crt"
 
-	AllowlistCustomConfigMapName = "observability-metrics-custom-allowlist"
-
 	ProxyServiceName      = "rbac-query-proxy"
 	ProxyRouteName        = "rbac-query-proxy"
 	ProxyRouteBYOCAName   = "proxy-byo-ca"
@@ -101,9 +72,6 @@ const (
 )
 
 const (
-	DefaultImgRepository = "quay.io/open-cluster-management"
-	DefaultImgTagSuffix  = "2.4.0-SNAPSHOT-2021-09-23-07-02-14"
-
 	ObservatoriumImgRepo           = "quay.io/observatorium"
 	ObservatoriumAPIImgName        = "observatorium"
 	ObservatoriumOperatorImgName   = "observatorium-operator"
@@ -127,26 +95,25 @@ const (
 	GrafanaDashboardLoaderName = "grafana-dashboard-loader"
 	GrafanaDashboardLoaderKey  = "grafana_dashboard_loader"
 
-	AlertManagerImgName           = "prometheus-alertmanager"
-	AlertManagerImgKey            = "prometheus_alertmanager"
-	ConfigmapReloaderImgRepo      = "quay.io/openshift"
-	ConfigmapReloaderImgName      = "origin-configmap-reloader"
-	ConfigmapReloaderImgTagSuffix = "4.8.0"
-	ConfigmapReloaderKey          = "prometheus-config-reloader"
+	AgentImgKey  = "agent_operator"
+	AgentImgName = "agent-operator"
+
+	AlertManagerImgName = "prometheus-alertmanager"
+	AlertManagerImgKey  = "prometheus_alertmanager"
 
 	OauthProxyImgRepo      = "quay.io/open-cluster-management"
 	OauthProxyImgName      = "origin-oauth-proxy"
 	OauthProxyImgTagSuffix = "2.0.12-SNAPSHOT-2021-06-11-19-40-10"
 	OauthProxyKey          = "oauth_proxy"
 
-	EndpointControllerImgName = "endpoint-monitoring-operator"
-	EndpointControllerKey     = "endpoint_monitoring_operator"
-
 	RBACQueryProxyImgName = "rbac-query-proxy"
 	RBACQueryProxyKey     = "rbac_query_proxy"
 
 	RBACQueryProxyCPURequets    = "20m"
 	RBACQueryProxyMemoryRequets = "100Mi"
+
+	AgentCPURequets    = "10m"
+	AgentMemoryRequets = "100Mi"
 
 	GrafanaCPURequets    = "4m"
 	GrafanaMemoryRequets = "100Mi"
@@ -190,12 +157,6 @@ const (
 	ThanosStoreCPURequets    = "100m"
 	ThanosStoreMemoryRequets = "1Gi"
 
-	MetricsCollectorCPURequets    = "10m"
-	MetricsCollectorMemoryRequets = "100Mi"
-	MetricsCollectorCPULimits     = ""
-	MetricsCollectorMemoryLimits  = ""
-
-	ObservatoriumAPI             = "observatorium-api"
 	ThanosCompact                = "thanos-compact"
 	ThanosQuery                  = "thanos-query"
 	ThanosQueryFrontend          = "thanos-query-frontend"
@@ -206,6 +167,7 @@ const (
 	ThanosStoreShard             = "thanos-store-shard"
 	MemcachedExporter            = "memcached-exporter"
 	Grafana                      = "grafana"
+	AgentOperator                = "agent-operator"
 	RBACQueryProxy               = "rbac-query-proxy"
 	Alertmanager                 = "alertmanager"
 	ThanosReceiveController      = "thanos-receive-controller"
@@ -220,22 +182,8 @@ const (
 	DeleteDelay            = "48h"
 	BlockDuration          = "2h"
 
-	DefaultImagePullPolicy = "Always"
-	DefaultImagePullSecret = "multiclusterhub-operator-pull-secret"
-
 	ResourceLimits   = "limits"
 	ResourceRequests = "requests"
-)
-
-const (
-	MCORsName = "multiclusterobservabilities"
-)
-
-const (
-	IngressControllerCRD           = "ingresscontrollers.operator.openshift.io"
-	MCHCrdName                     = "multiclusterhubs.operator.open-cluster-management.io"
-	MCOCrdName                     = "multiclusterobservabilities.observability.open-cluster-management.io"
-	StorageVersionMigrationCrdName = "storageversionmigrations.migration.k8s.io"
 )
 
 // ObjectStorgeConf is used to Unmarshal from bytes to do validation
@@ -245,11 +193,8 @@ type ObjectStorgeConf struct {
 }
 
 var (
-	log                         = logf.Log.WithName("config")
-	monitoringCRName            = ""
+	log                         = logf.Log.WithName("multiclusterobservability-config")
 	tenantUID                   = ""
-	imageManifests              = map[string]string{}
-	imageManifestConfigMapName  = ""
 	hasCustomRuleConfigMap      = false
 	hasCustomAlertmanagerConfig = false
 	certDuration                = time.Hour * 24 * 365
@@ -258,11 +203,11 @@ var (
 	Replicas2 int32 = 2
 	Replicas3 int32 = 3
 	Replicas        = map[string]*int32{
-		ObservatoriumAPI:    &Replicas2,
-		ThanosQuery:         &Replicas2,
-		ThanosQueryFrontend: &Replicas2,
-		Grafana:             &Replicas2,
-		RBACQueryProxy:      &Replicas2,
+		config.ObservatoriumAPI: &Replicas2,
+		ThanosQuery:             &Replicas2,
+		ThanosQueryFrontend:     &Replicas2,
+		Grafana:                 &Replicas2,
+		RBACQueryProxy:          &Replicas2,
 
 		ThanosRule:                   &Replicas3,
 		ThanosReceive:                &Replicas3,
@@ -285,7 +230,7 @@ func GetReplicas(component string, advanced *observabilityv1beta2.AdvancedConfig
 	}
 	var replicas *int32
 	switch component {
-	case ObservatoriumAPI:
+	case config.ObservatoriumAPI:
 		if advanced.ObservatoriumAPI != nil {
 			replicas = advanced.ObservatoriumAPI.Replicas
 		}
@@ -346,92 +291,17 @@ func GetClusterNameLabelKey() string {
 	return clusterNameLabelKey
 }
 
-func GetImageManifestConfigMapName() string {
-	return imageManifestConfigMapName
-}
-
-// ReadImageManifestConfigMap reads configmap with the label ocm-configmap-type=image-manifest
-func ReadImageManifestConfigMap(c client.Client, version string) (bool, error) {
-	mcoNamespace := GetMCONamespace()
-	// List image manifest configmap with label ocm-configmap-type=image-manifest and ocm-release-version
-	matchLabels := map[string]string{
-		OCMManifestConfigMapTypeLabelKey:    OCMManifestConfigMapTypeLabelValue,
-		OCMManifestConfigMapVersionLabelKey: version,
-	}
-	listOpts := []client.ListOption{
-		client.InNamespace(mcoNamespace),
-		client.MatchingLabels(matchLabels),
-	}
-
-	imageCMList := &corev1.ConfigMapList{}
-	err := c.List(context.TODO(), imageCMList, listOpts...)
-	if err != nil {
-		return false, fmt.Errorf("Failed to list mch-image-manifest configmaps: %v", err)
-	}
-
-	if len(imageCMList.Items) != 1 {
-		// there should be only one matched image manifest configmap found
-		return false, nil
-	}
-
-	imageManifests = imageCMList.Items[0].Data
-	log.V(1).Info("the length of mch-image-manifest configmap", "imageManifests", len(imageManifests))
-	return true, nil
-}
-
-// GetImageManifests...
-func GetImageManifests() map[string]string {
-	return imageManifests
-}
-
-// SetImageManifests sets imageManifests
-func SetImageManifests(images map[string]string) {
-	imageManifests = images
-}
-
-// ReplaceImage is used to replace the image with specified annotation or imagemanifest configmap
-func ReplaceImage(annotations map[string]string, imageRepo, componentName string) (bool, string) {
-	if annotations != nil {
-		annotationImageRepo, _ := annotations[AnnotationKeyImageRepository]
-		if annotationImageRepo == "" {
-			annotationImageRepo = DefaultImgRepository
-		}
-		// This is for test only. e.g.:
-		// if there is "mco-metrics_collector-image" defined in annotation, use it for testing
-		componentImage, hasComponentImage := annotations["mco-"+componentName+"-image"]
-		tagSuffix, hasTagSuffix := annotations[AnnotationKeyImageTagSuffix]
-		sameOrg := strings.Contains(imageRepo, DefaultImgRepository)
-
-		if hasComponentImage {
-			return true, componentImage
-		} else if hasTagSuffix && sameOrg {
-			repoSlice := strings.Split(imageRepo, "/")
-			imageName := strings.Split(repoSlice[len(repoSlice)-1], ":")[0]
-			image := annotationImageRepo + "/" + imageName + ":" + tagSuffix
-			log.V(1).Info("image replacement", "componentName", image)
-			return true, image
-		} else if !hasTagSuffix {
-			image, found := imageManifests[componentName]
-			log.V(1).Info("image replacement", "componentName", image)
-			if found {
-				return true, image
-			}
-			return false, ""
-		}
-		return false, ""
-	} else {
-		image, found := imageManifests[componentName]
-		log.V(1).Info("image replacement", "componentName", image)
-		if found {
-			return true, image
-		}
-		return false, ""
-	}
-}
-
 // GetDefaultTenantName returns the default tenant name
 func GetDefaultTenantName() string {
 	return defaultTenantName
+}
+
+func GetMCONamespace() string {
+	podNamespace, found := os.LookupEnv("POD_NAMESPACE")
+	if !found {
+		podNamespace = config.GetDefaultMCONamespace()
+	}
+	return podNamespace
 }
 
 // GetObsAPIHost is used to get the URL for observartium api gateway
@@ -441,7 +311,7 @@ func GetObsAPIHost(client client.Client, namespace string) (string, error) {
 	err := client.Get(context.TODO(), types.NamespacedName{Name: obsAPIGateway, Namespace: namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// if the observatorium-api router is not created yet, fallback to get host from the domain of ingresscontroller
-		domain, err := getDomainForIngressController(client, OpenshiftIngressOperatorCRName, OpenshiftIngressOperatorNamespace)
+		domain, err := getDomainForIngressController(client, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
 		if err != nil {
 			return "", nil
 		}
@@ -452,14 +322,6 @@ func GetObsAPIHost(client client.Client, namespace string) (string, error) {
 	return found.Spec.Host, nil
 }
 
-func GetMCONamespace() string {
-	podNamespace, found := os.LookupEnv("POD_NAMESPACE")
-	if !found {
-		podNamespace = defaultMCONamespace
-	}
-	return podNamespace
-}
-
 // GetAlertmanagerEndpoint is used to get the URL for alertmanager
 func GetAlertmanagerEndpoint(client client.Client, namespace string) (string, error) {
 	found := &routev1.Route{}
@@ -467,7 +329,7 @@ func GetAlertmanagerEndpoint(client client.Client, namespace string) (string, er
 	err := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagerRouteName, Namespace: namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// if the alertmanager router is not created yet, fallback to get host from the domain of ingresscontroller
-		domain, err := getDomainForIngressController(client, OpenshiftIngressOperatorCRName, OpenshiftIngressOperatorNamespace)
+		domain, err := getDomainForIngressController(client, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
 		if err != nil {
 			return "", nil
 		}
@@ -496,26 +358,27 @@ func getDomainForIngressController(client client.Client, name, namespace string)
 func GetAlertmanagerRouterCA(client client.Client) (string, error) {
 	amRouteBYOCaSrt := &corev1.Secret{}
 	amRouteBYOCertSrt := &corev1.Secret{}
-	err1 := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagerRouteBYOCAName, Namespace: GetDefaultNamespace()}, amRouteBYOCaSrt)
-	err2 := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagerRouteBYOCERTName, Namespace: GetDefaultNamespace()}, amRouteBYOCertSrt)
+	err1 := client.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteBYOCAName, Namespace: config.GetDefaultNamespace()}, amRouteBYOCaSrt)
+	err2 := client.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteBYOCERTName, Namespace: config.GetDefaultNamespace()}, amRouteBYOCertSrt)
 	if err1 == nil && err2 == nil {
 		return string(amRouteBYOCaSrt.Data["tls.crt"]), nil
 	}
 
 	ingressOperator := &operatorv1.IngressController{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: OpenshiftIngressOperatorCRName, Namespace: OpenshiftIngressOperatorNamespace}, ingressOperator)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: config.OpenshiftIngressOperatorCRName,
+		Namespace: config.OpenshiftIngressOperatorNamespace}, ingressOperator)
 	if err != nil {
 		return "", err
 	}
 
-	routerCASrtName := OpenshiftIngressDefaultCertName
+	routerCASrtName := config.OpenshiftIngressDefaultCertName
 	// check if custom default certificate is provided or not
 	if ingressOperator.Spec.DefaultCertificate != nil {
 		routerCASrtName = ingressOperator.Spec.DefaultCertificate.Name
 	}
 
 	routerCASecret := &corev1.Secret{}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: routerCASrtName, Namespace: OpenshiftIngressNamespace}, routerCASecret)
+	err = client.Get(context.TODO(), types.NamespacedName{Name: routerCASrtName, Namespace: config.OpenshiftIngressNamespace}, routerCASecret)
 	if err != nil {
 		return "", err
 	}
@@ -525,25 +388,11 @@ func GetAlertmanagerRouterCA(client client.Client) (string, error) {
 // GetAlertmanagerCA is used to get the CA of Alertmanager
 func GetAlertmanagerCA(client client.Client) (string, error) {
 	amCAConfigmap := &corev1.ConfigMap{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagersDefaultCaBundleName, Namespace: GetDefaultNamespace()}, amCAConfigmap)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagersDefaultCaBundleName, Namespace: config.GetDefaultNamespace()}, amCAConfigmap)
 	if err != nil {
 		return "", err
 	}
 	return string(amCAConfigmap.Data["service-ca.crt"]), nil
-}
-
-func GetDefaultNamespace() string {
-	return defaultNamespace
-}
-
-// GetMonitoringCRName returns monitoring cr name
-func GetMonitoringCRName() string {
-	return monitoringCRName
-}
-
-// SetMonitoringCRName sets the cr name
-func SetMonitoringCRName(crName string) {
-	monitoringCRName = crName
 }
 
 func infrastructureConfigNameNsN() types.NamespacedName {
@@ -595,25 +444,6 @@ func CheckIsIBMCloud(c client.Client) (bool, error) {
 	return false, nil
 }
 
-// GetDefaultCRName is used to get default CR name.
-func GetDefaultCRName() string {
-	return defaultCRName
-}
-
-// IsPaused returns true if the multiclusterobservability instance is labeled as paused, and false otherwise
-func IsPaused(annotations map[string]string) bool {
-	if annotations == nil {
-		return false
-	}
-
-	if annotations[AnnotationMCOPause] != "" &&
-		strings.EqualFold(annotations[AnnotationMCOPause], "true") {
-		return true
-	}
-
-	return false
-}
-
 // WithoutResourcesRequests returns true if the multiclusterobservability instance has annotation:
 // mco-thanos-without-resources-requests: "true"
 // This is just for test purpose: the KinD cluster does not have enough resources for the requests.
@@ -623,8 +453,8 @@ func WithoutResourcesRequests(annotations map[string]string) bool {
 		return false
 	}
 
-	if annotations[AnnotationMCOWithoutResourcesRequests] != "" &&
-		strings.EqualFold(annotations[AnnotationMCOWithoutResourcesRequests], "true") {
+	if annotations[config.AnnotationMCOWithoutResourcesRequests] != "" &&
+		strings.EqualFold(annotations[config.AnnotationMCOWithoutResourcesRequests], "true") {
 		return true
 	}
 
@@ -641,7 +471,7 @@ func GetTenantUID() string {
 
 // GetObsAPISvc returns observatorium api service
 func GetObsAPISvc(instanceName string) string {
-	return instanceName + "-observatorium-api." + defaultNamespace + ".svc.cluster.local"
+	return instanceName + "-observatorium-api." + config.GetDefaultNamespace() + ".svc.cluster.local"
 }
 
 // SetCustomRuleConfigMap set true if there is custom rule configmap
@@ -659,10 +489,10 @@ func GetCertDuration() time.Duration {
 }
 
 func SetCertDuration(annotations map[string]string) {
-	if annotations != nil && annotations[AnnotationCertDuration] != "" {
-		d, err := time.ParseDuration(annotations[AnnotationCertDuration])
+	if annotations != nil && annotations[config.AnnotationCertDuration] != "" {
+		d, err := time.ParseDuration(annotations[config.AnnotationCertDuration])
 		if err != nil {
-			log.Error(err, "Failed to parse cert duration, use default one", "annotation", annotations[AnnotationCertDuration])
+			log.Error(err, "Failed to parse cert duration, use default one", "annotation", annotations[config.AnnotationCertDuration])
 		} else {
 			certDuration = d
 			return
@@ -675,22 +505,6 @@ func GetOperandNamePrefix() string {
 	return operandNamePrefix
 }
 
-func GetImagePullPolicy(mco observabilityv1beta2.MultiClusterObservabilitySpec) corev1.PullPolicy {
-	if mco.ImagePullPolicy != "" {
-		return mco.ImagePullPolicy
-	} else {
-		return DefaultImagePullPolicy
-	}
-}
-
-func GetImagePullSecret(mco observabilityv1beta2.MultiClusterObservabilitySpec) string {
-	if mco.ImagePullSecret != "" {
-		return mco.ImagePullSecret
-	} else {
-		return DefaultImagePullSecret
-	}
-}
-
 func getDefaultResource(resourceType string, resource corev1.ResourceName,
 	component string) string {
 	//No provide the default limits
@@ -698,7 +512,7 @@ func getDefaultResource(resourceType string, resource corev1.ResourceName,
 		return ""
 	}
 	switch component {
-	case ObservatoriumAPI:
+	case config.ObservatoriumAPI:
 		if resource == corev1.ResourceCPU {
 			return ObservatoriumAPICPURequets
 		}
@@ -768,13 +582,13 @@ func getDefaultResource(resourceType string, resource corev1.ResourceName,
 		if resource == corev1.ResourceMemory {
 			return RBACQueryProxyMemoryRequets
 		}
-	case MetricsCollector:
-		if resource == corev1.ResourceCPU {
-			return MetricsCollectorCPURequets
-		}
-		if resource == corev1.ResourceMemory {
-			return MetricsCollectorMemoryRequets
-		}
+	// case MetricsCollector:
+	// 	if resource == corev1.ResourceCPU {
+	// 		return MetricsCollectorCPURequets
+	// 	}
+	// 	if resource == corev1.ResourceMemory {
+	// 		return MetricsCollectorMemoryRequets
+	// 	}
 	case Alertmanager:
 		if resource == corev1.ResourceCPU {
 			return AlertmanagerCPURequets
@@ -809,7 +623,7 @@ func getResource(resourceType string, resource corev1.ResourceName,
 	}
 	var resourcesReq *corev1.ResourceRequirements
 	switch component {
-	case ObservatoriumAPI:
+	case config.ObservatoriumAPI:
 		if advanced.ObservatoriumAPI != nil {
 			resourcesReq = advanced.ObservatoriumAPI.Resources
 		}
@@ -935,52 +749,6 @@ func GetResources(component string, advanced *observabilityv1beta2.AdvancedConfi
 	return resourceReq
 }
 
-func GetOBAResources(oba *mcoshared.ObservabilityAddonSpec) *corev1.ResourceRequirements {
-	cpuRequests := MetricsCollectorCPURequets
-	cpuLimits := MetricsCollectorCPULimits
-	memoryRequests := MetricsCollectorMemoryRequets
-	memoryLimits := MetricsCollectorMemoryLimits
-
-	if oba.Resources != nil {
-		if len(oba.Resources.Requests) != 0 {
-			if oba.Resources.Requests.Cpu().String() != "0" {
-				cpuRequests = oba.Resources.Requests.Cpu().String()
-			}
-			if oba.Resources.Requests.Memory().String() != "0" {
-				memoryRequests = oba.Resources.Requests.Memory().String()
-			}
-		}
-		if len(oba.Resources.Limits) != 0 {
-			if oba.Resources.Limits.Cpu().String() != "0" {
-				cpuLimits = oba.Resources.Limits.Cpu().String()
-			}
-			if oba.Resources.Limits.Memory().String() != "0" {
-				memoryLimits = oba.Resources.Limits.Memory().String()
-			}
-		}
-	}
-
-	resourceReq := &corev1.ResourceRequirements{}
-	requests := corev1.ResourceList{}
-	limits := corev1.ResourceList{}
-	if cpuRequests != "" {
-		requests[corev1.ResourceName(corev1.ResourceCPU)] = resource.MustParse(cpuRequests)
-	}
-	if memoryRequests != "" {
-		requests[corev1.ResourceName(corev1.ResourceMemory)] = resource.MustParse(memoryRequests)
-	}
-	if cpuLimits != "" {
-		limits[corev1.ResourceName(corev1.ResourceCPU)] = resource.MustParse(cpuLimits)
-	}
-	if memoryLimits != "" {
-		limits[corev1.ResourceName(corev1.ResourceMemory)] = resource.MustParse(memoryLimits)
-	}
-	resourceReq.Limits = limits
-	resourceReq.Requests = requests
-
-	return resourceReq
-}
-
 func GetOperandName(name string) string {
 	log.V(1).Info("operand is", "key", name, "name", operandNames[name])
 	return operandNames[name]
@@ -995,12 +763,13 @@ func SetOperandNames(c client.Client) error {
 	operandNames[RBACQueryProxy] = GetOperandNamePrefix() + RBACQueryProxy
 	operandNames[Alertmanager] = GetOperandNamePrefix() + Alertmanager
 	operandNames[ObservatoriumOperator] = GetOperandNamePrefix() + ObservatoriumOperator
-	operandNames[Observatorium] = GetDefaultCRName()
-	operandNames[ObservatoriumAPI] = GetOperandNamePrefix() + ObservatoriumAPI
+	operandNames[AgentOperator] = GetOperandNamePrefix() + AgentOperator
+	operandNames[Observatorium] = config.GetDefaultCRName()
+	operandNames[config.ObservatoriumAPI] = GetOperandNamePrefix() + config.ObservatoriumAPI
 
 	// Check if the Observatorium CR already exists
 	opts := &client.ListOptions{
-		Namespace: GetDefaultNamespace(),
+		Namespace: config.GetDefaultNamespace(),
 	}
 
 	observatoriumList := &obsv1alpha1.ObservatoriumList{}
@@ -1011,15 +780,15 @@ func SetOperandNames(c client.Client) error {
 	if len(observatoriumList.Items) != 0 {
 		for _, observatorium := range observatoriumList.Items {
 			for _, ownerRef := range observatorium.OwnerReferences {
-				if ownerRef.Kind == "MultiClusterObservability" && ownerRef.Name == GetMonitoringCRName() {
-					if observatorium.Name != GetDefaultCRName() {
+				if ownerRef.Kind == "MultiClusterObservability" && ownerRef.Name == config.GetMonitoringCRName() {
+					if observatorium.Name != config.GetDefaultCRName() {
 						// this is for upgrade case.
 						operandNames[Grafana] = Grafana
 						operandNames[RBACQueryProxy] = RBACQueryProxy
 						operandNames[Alertmanager] = Alertmanager
 						operandNames[ObservatoriumOperator] = ObservatoriumOperator
 						operandNames[Observatorium] = observatorium.Name
-						operandNames[ObservatoriumAPI] = observatorium.Name + "-" + ObservatoriumAPI
+						operandNames[config.ObservatoriumAPI] = observatorium.Name + "-" + config.ObservatoriumAPI
 					}
 					break
 				}

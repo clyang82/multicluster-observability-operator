@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
-package placementrule
+package observabilityagent
 
 import (
 	"net/url"
@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 // generateHubInfoSecret generates the secret that contains hubInfo.
@@ -45,8 +45,10 @@ func generateHubInfoSecret(client client.Client, obsNamespace string,
 		}
 	} else {
 		// for KinD support, the managedcluster and hub cluster are assumed in the same cluster, the observatorium-api will be accessed through k8s service FQDN + port
-		obsApiRouteHost = config.GetOperandNamePrefix() + "observatorium-api" + "." + config.GetDefaultNamespace() + ".svc.cluster.local:8080"
-		alertmanagerEndpoint = config.AlertmanagerServiceName + "." + config.GetDefaultNamespace() + ".svc.cluster.local:9095"
+		obsApiRouteHost = config.GetOperandNamePrefix() + "observatorium-api" + "." +
+			operatorsconfig.GetDefaultNamespace() + ".svc.cluster.local:8080"
+		alertmanagerEndpoint = config.AlertmanagerServiceName + "." +
+			operatorsconfig.GetDefaultNamespace() + ".svc.cluster.local:9095"
 		var err error
 		alertmanagerRouterCA, err = config.GetAlertmanagerCA(client)
 		if err != nil {
@@ -57,13 +59,13 @@ func generateHubInfoSecret(client client.Client, obsNamespace string,
 
 	obsApiURL := url.URL{
 		Host: obsApiRouteHost,
-		Path: operatorconfig.ObservatoriumAPIRemoteWritePath,
+		Path: operatorsconfig.ObservatoriumAPIRemoteWritePath,
 	}
 	if !obsApiURL.IsAbs() {
 		obsApiURL.Scheme = "https"
 	}
 
-	hubInfo := &operatorconfig.HubInfo{
+	hubInfo := &operatorsconfig.HubInfo{
 		ObservatoriumAPIEndpoint: obsApiURL.String(),
 		AlertmanagerEndpoint:     alertmanagerEndpoint,
 		AlertmanagerRouterCA:     alertmanagerRouterCA,
@@ -73,14 +75,14 @@ func generateHubInfoSecret(client client.Client, obsNamespace string,
 		return nil, err
 	}
 	configYamlMap := map[string][]byte{}
-	configYamlMap[operatorconfig.HubInfoSecretKey] = configYaml
+	configYamlMap[operatorsconfig.HubInfoSecretKey] = configYaml
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.HubInfoSecretName,
+			Name:      operatorsconfig.HubInfoSecretName,
 			Namespace: namespace,
 		},
 		Data: configYamlMap,

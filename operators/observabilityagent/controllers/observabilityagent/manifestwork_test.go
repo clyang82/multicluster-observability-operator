@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
-package placementrule
+package observabilityagent
 
 import (
 	"context"
@@ -23,8 +23,8 @@ import (
 	"github.com/open-cluster-management/multicloud-operators-foundation/pkg/apis/imageregistry/v1alpha1"
 	mcoshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
-	operatorconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
+	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	workv1 "open-cluster-management.io/api/work/v1"
 )
@@ -64,7 +64,7 @@ func newTestPullSecret() *corev1.Secret {
 func newCASecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ServerCACerts,
+			Name:      operatorsconfig.ServerCACerts,
 			Namespace: mcoNamespace,
 		},
 		Data: map[string][]byte{
@@ -93,7 +93,7 @@ func newCertSecret(namespaces ...string) *corev1.Secret {
 func NewMetricsAllowListCM() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorconfig.AllowlistConfigMapName,
+			Name:      operatorsconfig.AllowlistConfigMapName,
 			Namespace: mcoNamespace,
 		},
 		Data: map[string]string{"metrics_list.yaml": `
@@ -228,7 +228,7 @@ func TestManifestWork(t *testing.T) {
 		t.Fatalf("Failed to get global manifestwork resourc: (%v)", err)
 	}
 	t.Logf("work size is %d", len(works))
-	if hubInfoSecret, err = generateHubInfoSecret(c, config.GetDefaultNamespace(), spokeNameSpace, true); err != nil {
+	if hubInfoSecret, err = generateHubInfoSecret(c, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true); err != nil {
 		t.Fatalf("Failed to generate hubInfo secret: (%v)", err)
 	}
 	err = createManifestWorks(c, nil, namespace, clusterName, newTestMCO(), works, crdWork, endpointMetricsOperatorDeploy, hubInfoSecret, false)
@@ -292,7 +292,7 @@ func TestManifestWork(t *testing.T) {
 		t.Fatalf("Failed to get global manifestwork resourc: (%v)", err)
 	}
 
-	if hubInfoSecret, err = generateHubInfoSecret(c, config.GetDefaultNamespace(), spokeNameSpace, true); err != nil {
+	if hubInfoSecret, err = generateHubInfoSecret(c, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true); err != nil {
 		t.Fatalf("Failed to generate hubInfo secret: (%v)", err)
 	}
 

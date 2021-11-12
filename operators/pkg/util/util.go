@@ -9,7 +9,11 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var log = logf.Log.WithName("util")
 
 // Remove is used to remove string from a string array
 func Remove(list []string, s string) []string {
