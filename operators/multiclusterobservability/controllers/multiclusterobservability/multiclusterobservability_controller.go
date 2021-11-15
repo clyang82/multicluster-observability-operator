@@ -603,7 +603,7 @@ func GenerateAlertmanagerRoute(
 			},
 			To: routev1.RouteTargetReference{
 				Kind: "Service",
-				Name: config.AlertmanagerServiceName,
+				Name: operatorsconfig.AlertmanagerServiceName,
 			},
 			TLS: &routev1.TLSConfig{
 				Termination:                   routev1.TLSTerminationReencrypt,
