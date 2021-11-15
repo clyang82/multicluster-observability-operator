@@ -34,6 +34,7 @@ import (
 
 	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
+	certctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/certificates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/util"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
@@ -79,6 +80,9 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 		reqLogger.Info("multicluster observability resource is not available")
 		return ctrl.Result{}, nil
 	}
+
+	// setup ocm addon manager
+	certctrl.Start(r.Client)
 
 	deleteAll := false
 	// Fetch the MultiClusterObservability instance

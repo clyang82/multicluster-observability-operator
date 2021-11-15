@@ -37,7 +37,7 @@ const (
 	serverCerts          = config.ServerCerts
 
 	clientCACertificateCN = "observability-client-ca-certificate"
-	clientCACerts         = config.ClientCACerts
+	clientCACerts         = operatorsconfig.ClientCACerts
 	grafanaCertificateCN  = config.GrafanaCN
 	grafanaCerts          = config.GrafanaCerts
 )
@@ -197,7 +197,7 @@ func createCertSecret(c client.Client,
 			log.Error(err, "Failed to check certificate secret", "name", name)
 			return err
 		} else {
-			caCert, caKey, caCertBytes, err := getCA(c, isServer)
+			caCert, caKey, caCertBytes, err := util.GetCA(c, isServer)
 			if err != nil {
 				return err
 			}
@@ -252,7 +252,7 @@ func createCertSecret(c client.Client,
 		if !isRenew {
 			log.Info("Certificate secrets already existed", "name", name)
 		} else {
-			caCert, caKey, caCertBytes, err := getCA(c, isServer)
+			caCert, caKey, caCertBytes, err := util.GetCA(c, isServer)
 			if err != nil {
 				return err
 			}
@@ -333,33 +333,6 @@ func createCertificate(isServer bool, cn string, ou []string, dns []string, ips 
 	}
 	keyBytes := x509.MarshalPKCS1PrivateKey(key)
 	return keyBytes, caBytes, nil
-}
-
-func getCA(c client.Client, isServer bool) (*x509.Certificate, *rsa.PrivateKey, []byte, error) {
-	caCertName := serverCACerts
-	if !isServer {
-		caCertName = clientCACerts
-	}
-	caSecret := &corev1.Secret{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: operatorsconfig.GetDefaultNamespace(), Name: caCertName}, caSecret)
-	if err != nil {
-		log.Error(err, "Failed to get ca secret", "name", caCertName)
-		return nil, nil, nil, err
-	}
-	block1, rest := pem.Decode(caSecret.Data["tls.crt"])
-	caCertBytes := caSecret.Data["tls.crt"][:len(caSecret.Data["tls.crt"])-len(rest)]
-	caCerts, err := x509.ParseCertificates(block1.Bytes)
-	if err != nil {
-		log.Error(err, "Failed to parse ca cert", "name", caCertName)
-		return nil, nil, nil, err
-	}
-	block2, _ := pem.Decode(caSecret.Data["tls.key"])
-	caKey, err := x509.ParsePKCS1PrivateKey(block2.Bytes)
-	if err != nil {
-		log.Error(err, "Failed to parse ca key", "name", caCertName)
-		return nil, nil, nil, err
-	}
-	return caCerts[0], caKey, caCertBytes, nil
 }
 
 func removeExpiredCA(c client.Client, name string) {

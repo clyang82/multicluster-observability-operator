@@ -39,8 +39,10 @@ import (
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/certificates"
+	certctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/certificates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering"
+	smctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/servicemonitor"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/deploying"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
@@ -110,6 +112,15 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 
 	// start to update mco status
 	StartStatusUpdate(r.Client, instance)
+
+	ingressCtlCrdExists, _ := r.CRDMap[operatorsconfig.IngressControllerCRD]
+	if os.Getenv("UNIT_TEST") != "true" {
+		// setup ocm addon manager
+		certctrl.Start(r.Client, ingressCtlCrdExists)
+
+		// start servicemonitor controller
+		smctrl.Start()
+	}
 
 	// Init finalizers
 	isTerminating, err := r.initFinalization(instance)
@@ -189,7 +200,6 @@ func (r *MultiClusterObservabilityReconciler) Reconcile(ctx context.Context, req
 	// the route resource won't be created in testing env, for instance, KinD
 	// in the testing env, the service can be accessed via service name, we assume that
 	// in testing env, the local-cluster is the only allowed managedcluster
-	ingressCtlCrdExists, _ := r.CRDMap[operatorsconfig.IngressControllerCRD]
 	if ingressCtlCrdExists {
 		// expose alertmanager through route
 		result, err = GenerateAlertmanagerRoute(r.Client, r.Scheme, instance)

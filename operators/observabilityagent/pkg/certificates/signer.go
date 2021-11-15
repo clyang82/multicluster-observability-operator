@@ -16,6 +16,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
+)
+
+var (
+	clientCACertificateCN = "observability-client-ca-certificate"
+	clientCACerts         = "observability-client-ca-certs"
 )
 
 func getClient(s *runtime.Scheme) (client.Client, error) {
@@ -44,13 +51,8 @@ func sign(csr *certificatesv1.CertificateSigningRequest) []byte {
 		log.Error(err, err.Error())
 		return nil
 	}
-	if os.Getenv("TEST") != "" {
-		err, _ := createCASecret(c, nil, nil, false, clientCACerts, clientCACertificateCN)
-		if err != nil {
-			log.Error(err, "Failed to create CA")
-		}
-	}
-	caCert, caKey, _, err := getCA(c, false)
+
+	caCert, caKey, _, err := util.GetCA(c, false)
 	if err != nil {
 		return nil
 	}

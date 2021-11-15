@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	observabilityv1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
 	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	observabilityagentctl "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/controllers/observabilityagent"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
@@ -58,6 +59,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(observabilityv1beta1.AddToScheme(scheme))
+	utilruntime.Must(observabilityv1beta2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -95,6 +98,11 @@ func main() {
 	}
 
 	if err := clusterv1.AddToScheme(scheme); err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := addonv1alpha1.AddToScheme(scheme); err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}

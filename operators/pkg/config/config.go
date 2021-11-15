@@ -56,6 +56,7 @@ const (
 	AnnotationCertDuration                = "mco-cert-duration"
 
 	ServerCACerts = "observability-server-ca-certs"
+	ClientCACerts = "observability-client-ca-certs"
 
 	ImageManifestConfigMapNamePrefix    = "mch-image-manifest-"
 	OCMManifestConfigMapTypeLabelKey    = "ocm-configmap-type"

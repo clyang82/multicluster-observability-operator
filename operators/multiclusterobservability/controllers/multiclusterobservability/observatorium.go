@@ -299,7 +299,7 @@ func newAPITenants() []obsv1alpha1.APITenant {
 			Name: mcoconfig.GetDefaultTenantName(),
 			ID:   mcoconfig.GetTenantUID(),
 			MTLS: &obsv1alpha1.TenantMTLS{
-				SecretName: config.ClientCACerts,
+				SecretName: operatorsconfig.ClientCACerts,
 				CAKey:      "tls.crt",
 			},
 		},

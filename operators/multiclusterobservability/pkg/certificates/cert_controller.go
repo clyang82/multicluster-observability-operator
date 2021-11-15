@@ -26,7 +26,6 @@ import (
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
-	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 )
 
 const (
@@ -44,25 +43,6 @@ func Start(c client.Client, ingressCtlCrdExists bool) {
 		return
 	}
 	isCertControllerRunnning = true
-
-	// setup ocm addon manager
-	addonMgr, err := addonmanager.New(ctrl.GetConfigOrDie())
-	if err != nil {
-		log.Error(err, "Failed to init addon manager")
-		os.Exit(1)
-	}
-	agent := &ObservabilityAgent{}
-	err = addonMgr.AddAgent(agent)
-	if err != nil {
-		log.Error(err, "Failed to add agent for addon manager")
-		os.Exit(1)
-	}
-
-	err = addonMgr.Start(context.TODO())
-	if err != nil {
-		log.Error(err, "Failed to start addon manager")
-		os.Exit(1)
-	}
 
 	kubeClient, err := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
 	if err != nil {
@@ -96,7 +76,7 @@ func restartPods(c client.Client, s v1.Secret, isUpdate bool) {
 	if s.Name == operatorsconfig.ServerCACerts || s.Name == config.GrafanaCerts {
 		dName = config.GetOperandName(config.RBACQueryProxy)
 	}
-	if s.Name == config.ClientCACerts || s.Name == config.ServerCerts {
+	if s.Name == operatorsconfig.ClientCACerts || s.Name == config.ServerCerts {
 		dName = config.GetOperandName(operatorsconfig.ObservatoriumAPI)
 	}
 	if dName != "" {

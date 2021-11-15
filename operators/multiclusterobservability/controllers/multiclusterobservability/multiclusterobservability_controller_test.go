@@ -314,7 +314,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 
 	svc := createObservatoriumAPIService(name, namespace)
 	serverCACerts := newTestCert(operatorsconfig.ServerCACerts, namespace)
-	clientCACerts := newTestCert(config.ClientCACerts, namespace)
+	clientCACerts := newTestCert(operatorsconfig.ClientCACerts, namespace)
 	grafanaCert := newTestCert(config.GrafanaCerts, namespace)
 	serverCert := newTestCert(config.ServerCerts, namespace)
 	// byo case for the alertmanager route
@@ -642,7 +642,7 @@ func TestImageReplaceForMCO(t *testing.T) {
 
 	observatoriumAPIsvc := createObservatoriumAPIService(name, namespace)
 	serverCACerts := newTestCert(operatorsconfig.ServerCACerts, namespace)
-	clientCACerts := newTestCert(config.ClientCACerts, namespace)
+	clientCACerts := newTestCert(operatorsconfig.ClientCACerts, namespace)
 	grafanaCert := newTestCert(config.GrafanaCerts, namespace)
 	serverCert := newTestCert(config.ServerCerts, namespace)
 	// create the image manifest configmap

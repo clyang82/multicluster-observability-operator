@@ -33,7 +33,6 @@ const (
 
 	ComponentVersion = "COMPONENT_VERSION"
 
-	ClientCACerts    = "observability-client-ca-certs"
 	ServerCerts      = "observability-server-certs"
 	ServerCertCN     = "observability-server-certificate"
 	GrafanaCerts     = "observability-grafana-certs"

@@ -4,13 +4,22 @@
 package util
 
 import (
+	"context"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"net/http"
 	"net/http/pprof"
 	"os"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 var log = logf.Log.WithName("util")
@@ -114,4 +123,31 @@ func RegisterDebugEndpoint(register func(string, http.Handler) error) error {
 	}
 
 	return nil
+}
+
+func GetCA(c client.Client, isServer bool) (*x509.Certificate, *rsa.PrivateKey, []byte, error) {
+	caCertName := config.ServerCACerts
+	if !isServer {
+		caCertName = config.ClientCACerts
+	}
+	caSecret := &corev1.Secret{}
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: config.GetDefaultNamespace(), Name: caCertName}, caSecret)
+	if err != nil {
+		log.Error(err, "Failed to get ca secret", "name", caCertName)
+		return nil, nil, nil, err
+	}
+	block1, rest := pem.Decode(caSecret.Data["tls.crt"])
+	caCertBytes := caSecret.Data["tls.crt"][:len(caSecret.Data["tls.crt"])-len(rest)]
+	caCerts, err := x509.ParseCertificates(block1.Bytes)
+	if err != nil {
+		log.Error(err, "Failed to parse ca cert", "name", caCertName)
+		return nil, nil, nil, err
+	}
+	block2, _ := pem.Decode(caSecret.Data["tls.key"])
+	caKey, err := x509.ParsePKCS1PrivateKey(block2.Bytes)
+	if err != nil {
+		log.Error(err, "Failed to parse ca key", "name", caCertName)
+		return nil, nil, nil, err
+	}
+	return caCerts[0], caKey, caCertBytes, nil
 }
