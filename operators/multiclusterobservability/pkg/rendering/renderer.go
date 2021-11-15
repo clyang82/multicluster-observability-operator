@@ -44,6 +44,7 @@ func NewMCORenderer(multipleClusterMonitoring *obv1beta2.MultiClusterObservabili
 	mcoRenderer.newAlertManagerRenderer()
 	mcoRenderer.newThanosRenderer()
 	mcoRenderer.newProxyRenderer()
+	mcoRenderer.newAgentRenderer()
 	return mcoRenderer
 }
 
