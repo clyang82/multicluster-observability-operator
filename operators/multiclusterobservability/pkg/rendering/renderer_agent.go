@@ -17,7 +17,7 @@ import (
 
 func (r *MCORenderer) newAgentRenderer() {
 	r.renderGrafanaFns = map[string]rendererutil.RenderFn{
-		"Deployment":            r.renderGrafanaDeployments,
+		"Deployment":            r.renderAgentDeployments,
 		"Service":               r.renderer.RenderNamespace,
 		"ServiceAccount":        r.renderer.RenderNamespace,
 		"ConfigMap":             r.renderer.RenderNamespace,
