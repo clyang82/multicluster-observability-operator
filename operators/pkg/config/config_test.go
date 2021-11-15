@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	observatoriumv1alpha1 "github.com/open-cluster-management/observatorium-operator/api/v1alpha1"
+	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -356,5 +357,29 @@ func TestReadImageManifestConfigMap(t *testing.T) {
 				t.Errorf("case (%v) output (%v) is not the expected (%v)", c.name, GetImageManifests(), c.expectedData)
 			}
 		})
+	}
+}
+
+func TestGetObsAPIHost(t *testing.T) {
+	route := &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      obsAPIGateway,
+			Namespace: "test",
+		},
+		Spec: routev1.RouteSpec{
+			Host: apiServerURL,
+		},
+	}
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(routev1.GroupVersion, route)
+	client := fake.NewFakeClientWithScheme(scheme, route)
+
+	host, _ := GetObsAPIHost(client, "default")
+	if host == apiServerURL {
+		t.Errorf("Should not get route host in default namespace")
+	}
+	host, _ = GetObsAPIHost(client, "test")
+	if host != apiServerURL {
+		t.Errorf("Observatorium api (%v) is not the expected (%v)", host, apiServerURL)
 	}
 }

@@ -12,7 +12,7 @@ import (
 )
 
 // *Templates contains all kustomize resources
-var genericTemplates, agentTemplates, grafanaTemplates, alertManagerTemplates, thanosTemplates, proxyTemplates, endpointObservabilityTemplates, prometheusTemplates []*resource.Resource
+var genericTemplates, agentTemplates, grafanaTemplates, alertManagerTemplates, thanosTemplates, proxyTemplates []*resource.Resource
 
 // GetOrLoadGenericTemplates reads base manifest
 func GetOrLoadGenericTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
@@ -110,38 +110,6 @@ func GetOrLoadProxyTemplates(r *templates.TemplateRenderer) ([]*resource.Resourc
 	return proxyTemplates, nil
 }
 
-// GetEndpointObservabilityTemplates reads endpoint-observability manifest
-func GetOrLoadEndpointObservabilityTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
-	if len(endpointObservabilityTemplates) > 0 {
-		return endpointObservabilityTemplates, nil
-	}
-
-	basePath := path.Join(r.GetTemplatesPath(), "endpoint-observability")
-
-	// add endpoint ovservability template
-	if err := r.AddTemplateFromPath(basePath, &endpointObservabilityTemplates); err != nil {
-		return endpointObservabilityTemplates, err
-	}
-
-	return endpointObservabilityTemplates, nil
-}
-
-// GetOrLoadPrometheusTemplates reads endpoint-observability manifest
-func GetOrLoadPrometheusTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
-	if len(prometheusTemplates) > 0 {
-		return prometheusTemplates, nil
-	}
-
-	basePath := path.Join(r.GetTemplatesPath(), "prometheus")
-
-	// add endpoint ovservability template
-	if err := r.AddTemplateFromPath(basePath, &prometheusTemplates); err != nil {
-		return prometheusTemplates, err
-	}
-
-	return prometheusTemplates, nil
-}
-
 // ResetTemplates reset all the loaded templates
 func ResetTemplates() {
 	genericTemplates = nil
@@ -149,5 +117,4 @@ func ResetTemplates() {
 	alertManagerTemplates = nil
 	thanosTemplates = nil
 	proxyTemplates = nil
-	endpointObservabilityTemplates = nil
 }

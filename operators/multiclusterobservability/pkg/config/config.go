@@ -5,19 +5,15 @@ package config
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	obsv1alpha1 "github.com/open-cluster-management/observatorium-operator/api/v1alpha1"
 	ocinfrav1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	ocpClientSet "github.com/openshift/client-go/config/clientset/versioned"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,10 +28,8 @@ import (
 const (
 	crLabelKey               = "observability.open-cluster-management.io/name"
 	clusterNameLabelKey      = "cluster"
-	obsAPIGateway            = "observatorium-api"
 	infrastructureConfigName = "cluster"
 	defaultTenantName        = "default"
-	operandNamePrefix        = "observability-"
 
 	ComponentVersion = "COMPONENT_VERSION"
 
@@ -45,9 +39,6 @@ const (
 	GrafanaCerts     = "observability-grafana-certs"
 	GrafanaCN        = "grafana"
 	ManagedClusterOU = "acm"
-
-	AlertmanagerServiceName = "alertmanager"
-	AlertmanagerRouteName   = "alertmanager"
 
 	AlertRuleDefaultConfigMapName = "thanos-ruler-default-rules"
 	AlertRuleDefaultFileKey       = "default_rules.yaml"
@@ -59,7 +50,6 @@ const (
 	AlertmanagersDefaultConfigMapName     = "thanos-ruler-config"
 	AlertmanagersDefaultConfigFileKey     = "config.yaml"
 	AlertmanagersDefaultCaBundleMountPath = "/etc/thanos/configmaps/alertmanager-ca-bundle"
-	AlertmanagersDefaultCaBundleName      = "alertmanager-ca-bundle"
 	AlertmanagersDefaultCaBundleKey       = "service-ca.crt"
 
 	ProxyServiceName      = "rbac-query-proxy"
@@ -304,97 +294,6 @@ func GetMCONamespace() string {
 	return podNamespace
 }
 
-// GetObsAPIHost is used to get the URL for observartium api gateway
-func GetObsAPIHost(client client.Client, namespace string) (string, error) {
-	found := &routev1.Route{}
-
-	err := client.Get(context.TODO(), types.NamespacedName{Name: obsAPIGateway, Namespace: namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		// if the observatorium-api router is not created yet, fallback to get host from the domain of ingresscontroller
-		domain, err := getDomainForIngressController(client, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
-		if err != nil {
-			return "", nil
-		}
-		return obsAPIGateway + "-" + namespace + "." + domain, nil
-	} else if err != nil {
-		return "", err
-	}
-	return found.Spec.Host, nil
-}
-
-// GetAlertmanagerEndpoint is used to get the URL for alertmanager
-func GetAlertmanagerEndpoint(client client.Client, namespace string) (string, error) {
-	found := &routev1.Route{}
-
-	err := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagerRouteName, Namespace: namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		// if the alertmanager router is not created yet, fallback to get host from the domain of ingresscontroller
-		domain, err := getDomainForIngressController(client, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
-		if err != nil {
-			return "", nil
-		}
-		return AlertmanagerRouteName + "-" + namespace + "." + domain, nil
-	} else if err != nil {
-		return "", err
-	}
-	return found.Spec.Host, nil
-}
-
-// getDomainForIngressController get the domain for the given ingresscontroller instance
-func getDomainForIngressController(client client.Client, name, namespace string) (string, error) {
-	ingressOperatorInstance := &operatorv1.IngressController{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, ingressOperatorInstance)
-	if err != nil {
-		return "", err
-	}
-	domain := ingressOperatorInstance.Status.Domain
-	if domain == "" {
-		return "", fmt.Errorf("no domain found in the ingressOperator: %s/%s.", namespace, name)
-	}
-	return domain, nil
-}
-
-// GetAlertmanagerRouterCA is used to get the CA of openshift Route
-func GetAlertmanagerRouterCA(client client.Client) (string, error) {
-	amRouteBYOCaSrt := &corev1.Secret{}
-	amRouteBYOCertSrt := &corev1.Secret{}
-	err1 := client.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteBYOCAName, Namespace: config.GetDefaultNamespace()}, amRouteBYOCaSrt)
-	err2 := client.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteBYOCERTName, Namespace: config.GetDefaultNamespace()}, amRouteBYOCertSrt)
-	if err1 == nil && err2 == nil {
-		return string(amRouteBYOCaSrt.Data["tls.crt"]), nil
-	}
-
-	ingressOperator := &operatorv1.IngressController{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: config.OpenshiftIngressOperatorCRName,
-		Namespace: config.OpenshiftIngressOperatorNamespace}, ingressOperator)
-	if err != nil {
-		return "", err
-	}
-
-	routerCASrtName := config.OpenshiftIngressDefaultCertName
-	// check if custom default certificate is provided or not
-	if ingressOperator.Spec.DefaultCertificate != nil {
-		routerCASrtName = ingressOperator.Spec.DefaultCertificate.Name
-	}
-
-	routerCASecret := &corev1.Secret{}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: routerCASrtName, Namespace: config.OpenshiftIngressNamespace}, routerCASecret)
-	if err != nil {
-		return "", err
-	}
-	return string(routerCASecret.Data["tls.crt"]), nil
-}
-
-// GetAlertmanagerCA is used to get the CA of Alertmanager
-func GetAlertmanagerCA(client client.Client) (string, error) {
-	amCAConfigmap := &corev1.ConfigMap{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: AlertmanagersDefaultCaBundleName, Namespace: config.GetDefaultNamespace()}, amCAConfigmap)
-	if err != nil {
-		return "", err
-	}
-	return string(amCAConfigmap.Data["service-ca.crt"]), nil
-}
-
 func infrastructureConfigNameNsN() types.NamespacedName {
 	return types.NamespacedName{
 		Name: infrastructureConfigName,
@@ -499,10 +398,6 @@ func SetCertDuration(annotations map[string]string) {
 		}
 	}
 	certDuration = time.Hour * 24 * 365
-}
-
-func GetOperandNamePrefix() string {
-	return operandNamePrefix
 }
 
 func getDefaultResource(resourceType string, resource corev1.ResourceName,
@@ -759,13 +654,13 @@ func SetOperandNames(c client.Client) error {
 		return nil
 	}
 	//set the default values.
-	operandNames[Grafana] = GetOperandNamePrefix() + Grafana
-	operandNames[RBACQueryProxy] = GetOperandNamePrefix() + RBACQueryProxy
-	operandNames[Alertmanager] = GetOperandNamePrefix() + Alertmanager
-	operandNames[ObservatoriumOperator] = GetOperandNamePrefix() + ObservatoriumOperator
-	operandNames[AgentOperator] = GetOperandNamePrefix() + AgentOperator
+	operandNames[Grafana] = config.GetOperandNamePrefix() + Grafana
+	operandNames[RBACQueryProxy] = config.GetOperandNamePrefix() + RBACQueryProxy
+	operandNames[Alertmanager] = config.GetOperandNamePrefix() + Alertmanager
+	operandNames[ObservatoriumOperator] = config.GetOperandNamePrefix() + ObservatoriumOperator
+	operandNames[AgentOperator] = config.GetOperandNamePrefix() + AgentOperator
 	operandNames[Observatorium] = config.GetDefaultCRName()
-	operandNames[config.ObservatoriumAPI] = GetOperandNamePrefix() + config.ObservatoriumAPI
+	operandNames[config.ObservatoriumAPI] = config.GetOperandNamePrefix() + config.ObservatoriumAPI
 
 	// Check if the Observatorium CR already exists
 	opts := &client.ListOptions{

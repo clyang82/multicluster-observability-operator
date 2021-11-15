@@ -247,13 +247,13 @@ func updateAddonSpecStatus(
 
 func getExpectedDeploymentNames() []string {
 	return []string{
-		config.GetOperandNamePrefix() + config.Grafana,
-		config.GetOperandNamePrefix() + operatorsconfig.ObservatoriumAPI,
-		config.GetOperandNamePrefix() + config.ThanosQuery,
-		config.GetOperandNamePrefix() + config.ThanosQueryFrontend,
-		config.GetOperandNamePrefix() + config.ThanosReceiveController,
-		config.GetOperandNamePrefix() + config.ObservatoriumOperator,
-		config.GetOperandNamePrefix() + config.RBACQueryProxy,
+		operatorsconfig.GetOperandNamePrefix() + config.Grafana,
+		operatorsconfig.GetOperandNamePrefix() + operatorsconfig.ObservatoriumAPI,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosQuery,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosQueryFrontend,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosReceiveController,
+		operatorsconfig.GetOperandNamePrefix() + config.ObservatoriumOperator,
+		operatorsconfig.GetOperandNamePrefix() + config.RBACQueryProxy,
 	}
 }
 
@@ -284,12 +284,12 @@ func checkDeployStatus(
 
 func getExpectedStatefulSetNames() []string {
 	return []string{
-		config.GetOperandNamePrefix() + config.Alertmanager,
-		config.GetOperandNamePrefix() + config.ThanosCompact,
-		config.GetOperandNamePrefix() + config.ThanosReceive,
-		config.GetOperandNamePrefix() + config.ThanosRule,
-		config.GetOperandNamePrefix() + config.ThanosStoreMemcached,
-		config.GetOperandNamePrefix() + config.ThanosStoreShard + "-0",
+		operatorsconfig.GetOperandNamePrefix() + config.Alertmanager,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosCompact,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosReceive,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosRule,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosStoreMemcached,
+		operatorsconfig.GetOperandNamePrefix() + config.ThanosStoreShard + "-0",
 	}
 }
 

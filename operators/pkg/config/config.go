@@ -9,15 +9,21 @@ import (
 	"os"
 	"strings"
 
-	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 )
 
 const (
 	ClusterNameKey                  = "cluster-name"
 	HubInfoSecretName               = "hub-info-secret"
+	obsAPIGateway                   = "observatorium-api"
 	HubInfoSecretKey                = "hub-info.yaml" // #nosec
 	ObservatoriumAPIRemoteWritePath = "/api/metrics/v1/default/api/v1/receive"
 	AnnotationSkipCreation          = "skip-creation-if-exist"
@@ -62,8 +68,11 @@ const (
 	OpenshiftIngressDefaultCertName   = "router-certs-default"
 	OpenshiftIngressRouteCAName       = "router-ca"
 
-	AlertmanagerRouteBYOCAName   = "alertmanager-byo-ca"
-	AlertmanagerRouteBYOCERTName = "alertmanager-byo-cert"
+	AlertmanagerRouteBYOCAName       = "alertmanager-byo-ca"
+	AlertmanagerRouteBYOCERTName     = "alertmanager-byo-cert"
+	AlertmanagerRouteName            = "alertmanager"
+	AlertmanagerServiceName          = "alertmanager"
+	AlertmanagersDefaultCaBundleName = "alertmanager-ca-bundle"
 
 	MCHUpdatedRequestName = "mch-updated-request"
 	MCOUpdatedRequestName = "mco-updated-request"
@@ -91,6 +100,8 @@ const (
 	ConfigmapReloaderKey          = "prometheus-config-reloader"
 
 	ObservatoriumAPI = "observatorium-api"
+
+	operandNamePrefix = "observability-"
 )
 
 var (
@@ -264,4 +275,40 @@ func IsPaused(annotations map[string]string) bool {
 	}
 
 	return false
+}
+
+// GetDomainForIngressController get the domain for the given ingresscontroller instance
+func GetDomainForIngressController(client client.Client, name, namespace string) (string, error) {
+	ingressOperatorInstance := &operatorv1.IngressController{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, ingressOperatorInstance)
+	if err != nil {
+		return "", err
+	}
+	domain := ingressOperatorInstance.Status.Domain
+	if domain == "" {
+		return "", fmt.Errorf("no domain found in the ingressOperator: %s/%s.", namespace, name)
+	}
+	return domain, nil
+}
+
+// GetObsAPIHost is used to get the URL for observartium api gateway
+func GetObsAPIHost(client client.Client, namespace string) (string, error) {
+	found := &routev1.Route{}
+
+	err := client.Get(context.TODO(), types.NamespacedName{Name: obsAPIGateway, Namespace: namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		// if the observatorium-api router is not created yet, fallback to get host from the domain of ingresscontroller
+		domain, err := GetDomainForIngressController(client, OpenshiftIngressOperatorCRName, OpenshiftIngressOperatorNamespace)
+		if err != nil {
+			return "", nil
+		}
+		return obsAPIGateway + "-" + namespace + "." + domain, nil
+	} else if err != nil {
+		return "", err
+	}
+	return found.Spec.Host, nil
+}
+
+func GetOperandNamePrefix() string {
+	return operandNamePrefix
 }

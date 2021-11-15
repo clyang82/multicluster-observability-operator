@@ -593,7 +593,7 @@ func GenerateAlertmanagerRoute(
 	mco *mcov1beta2.MultiClusterObservability) (*ctrl.Result, error) {
 	amGateway := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.AlertmanagerRouteName,
+			Name:      operatorsconfig.AlertmanagerRouteName,
 			Namespace: operatorsconfig.GetDefaultNamespace(),
 		},
 		Spec: routev1.RouteSpec{

@@ -13,10 +13,10 @@ import (
 	"sigs.k8s.io/kustomize/v3/pkg/resource"
 
 	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/rendering/templates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/rendering/templates"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
-	templatesutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
+	operatorstemplates "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
 
@@ -35,7 +35,7 @@ func loadTemplates(mco *mcov1beta2.MultiClusterObservability) (
 	*corev1.ConfigMap,
 	error) {
 	// render endpoint-observability templates
-	endpointObsTemplates, err := templates.GetOrLoadEndpointObservabilityTemplates(templatesutil.GetTemplateRenderer())
+	endpointObsTemplates, err := templates.GetOrLoadEndpointObservabilityTemplates(operatorstemplates.GetTemplateRenderer())
 	if err != nil {
 		log.Error(err, "Failed to load templates")
 		return nil, nil, nil, nil, nil, err
@@ -162,7 +162,7 @@ func getImage(mco *mcov1beta2.MultiClusterObservability,
 func loadPromTemplates(mco *mcov1beta2.MultiClusterObservability) (
 	[]runtime.RawExtension, error) {
 	// load and render promTemplates
-	promTemplates, err := templates.GetOrLoadPrometheusTemplates(templatesutil.GetTemplateRenderer())
+	promTemplates, err := templates.GetOrLoadPrometheusTemplates(operatorstemplates.GetTemplateRenderer())
 	if err != nil {
 		log.Error(err, "Failed to load templates")
 		return nil, err

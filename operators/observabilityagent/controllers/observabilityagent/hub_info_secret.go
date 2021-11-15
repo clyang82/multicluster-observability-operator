@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
@@ -26,7 +26,7 @@ func generateHubInfoSecret(client client.Client, obsNamespace string,
 
 	if ingressCtlCrdExists {
 		var err error
-		obsApiRouteHost, err = config.GetObsAPIHost(client, obsNamespace)
+		obsApiRouteHost, err = operatorsconfig.GetObsAPIHost(client, obsNamespace)
 		if err != nil {
 			log.Error(err, "Failed to get the host for observatorium API route")
 			return nil, err
@@ -45,9 +45,9 @@ func generateHubInfoSecret(client client.Client, obsNamespace string,
 		}
 	} else {
 		// for KinD support, the managedcluster and hub cluster are assumed in the same cluster, the observatorium-api will be accessed through k8s service FQDN + port
-		obsApiRouteHost = config.GetOperandNamePrefix() + "observatorium-api" + "." +
+		obsApiRouteHost = operatorsconfig.GetOperandNamePrefix() + "observatorium-api" + "." +
 			operatorsconfig.GetDefaultNamespace() + ".svc.cluster.local:8080"
-		alertmanagerEndpoint = config.AlertmanagerServiceName + "." +
+		alertmanagerEndpoint = operatorsconfig.AlertmanagerServiceName + "." +
 			operatorsconfig.GetDefaultNamespace() + ".svc.cluster.local:9095"
 		var err error
 		alertmanagerRouterCA, err = config.GetAlertmanagerCA(client)

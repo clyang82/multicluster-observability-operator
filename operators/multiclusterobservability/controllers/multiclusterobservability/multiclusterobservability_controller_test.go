@@ -359,7 +359,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 
 	amRoute := &routev1.Route{}
 	err = cl.Get(context.TODO(), types.NamespacedName{
-		Name:      config.AlertmanagerRouteName,
+		Name:      operatorsconfig.AlertmanagerRouteName,
 		Namespace: namespace,
 	}, amRoute)
 	if err != nil {
@@ -499,14 +499,14 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 	err = cl.Delete(context.TODO(), createReadyStatefulSet(
 		name,
 		namespace,
-		config.GetOperandNamePrefix()+"alertmanager"))
+		operatorsconfig.GetOperandNamePrefix()+"alertmanager"))
 	if err != nil {
 		t.Fatalf("Failed to delete alertmanager: (%v)", err)
 	}
 	failedAlertManager := createFailedStatefulSet(
 		name,
 		namespace,
-		config.GetOperandNamePrefix()+"alertmanager")
+		operatorsconfig.GetOperandNamePrefix()+"alertmanager")
 	err = cl.Create(context.TODO(), failedAlertManager)
 	if err != nil {
 		t.Fatalf("Failed to create alertmanager: (%v)", err)
@@ -530,7 +530,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 	}
 
 	// test DeploymentNotReady status
-	err = cl.Delete(context.TODO(), createReadyDeployment(config.GetOperandNamePrefix()+"rbac-query-proxy", namespace))
+	err = cl.Delete(context.TODO(), createReadyDeployment(operatorsconfig.GetOperandNamePrefix()+"rbac-query-proxy", namespace))
 	if err != nil {
 		t.Fatalf("Failed to delete rbac-query-proxy: (%v)", err)
 	}
@@ -541,7 +541,7 @@ func TestMultiClusterMonitoringCRUpdate(t *testing.T) {
 	err = cl.Create(context.TODO(), createReadyStatefulSet(
 		name,
 		namespace,
-		config.GetOperandNamePrefix()+"alertmanager"))
+		operatorsconfig.GetOperandNamePrefix()+"alertmanager"))
 	if err != nil {
 		t.Fatalf("Failed to delete alertmanager: (%v)", err)
 	}
@@ -683,9 +683,9 @@ func TestImageReplaceForMCO(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	expectedDeploymentNames := []string{
-		config.GetOperandNamePrefix() + config.Grafana,
-		config.GetOperandNamePrefix() + config.ObservatoriumOperator,
-		config.GetOperandNamePrefix() + config.RBACQueryProxy,
+		operatorsconfig.GetOperandNamePrefix() + config.Grafana,
+		operatorsconfig.GetOperandNamePrefix() + config.ObservatoriumOperator,
+		operatorsconfig.GetOperandNamePrefix() + config.RBACQueryProxy,
 	}
 	for _, deployName := range expectedDeploymentNames {
 		deploy := &appsv1.Deployment{}
@@ -716,7 +716,7 @@ func TestImageReplaceForMCO(t *testing.T) {
 	}
 
 	expectedStatefulSetNames := []string{
-		config.GetOperandNamePrefix() + config.Alertmanager,
+		operatorsconfig.GetOperandNamePrefix() + config.Alertmanager,
 	}
 	for _, statefulName := range expectedStatefulSetNames {
 		sts := &appsv1.StatefulSet{}

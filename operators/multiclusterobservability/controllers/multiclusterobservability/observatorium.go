@@ -167,7 +167,7 @@ func GenerateAPIGatewayRoute(
 			},
 			To: routev1.RouteTargetReference{
 				Kind: "Service",
-				Name: mcoconfig.GetOperandNamePrefix() + "observatorium-api",
+				Name: operatorsconfig.GetOperandNamePrefix() + "observatorium-api",
 			},
 			TLS: &routev1.TLSConfig{
 				Termination:                   routev1.TLSTerminationPassthrough,
@@ -415,7 +415,7 @@ func newRuleSpec(mco *mcov1beta2.MultiClusterObservability, scSelected string) o
 		{
 			Type:      obsv1alpha1.VolumeMountTypeConfigMap,
 			MountPath: mcoconfig.AlertmanagersDefaultCaBundleMountPath,
-			Name:      mcoconfig.AlertmanagersDefaultCaBundleName,
+			Name:      operatorsconfig.AlertmanagersDefaultCaBundleName,
 			Key:       mcoconfig.AlertmanagersDefaultCaBundleKey,
 		},
 	}

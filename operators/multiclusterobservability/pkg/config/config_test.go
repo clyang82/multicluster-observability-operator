@@ -9,7 +9,6 @@ import (
 
 	observatoriumv1alpha1 "github.com/open-cluster-management/observatorium-operator/api/v1alpha1"
 	configv1 "github.com/openshift/api/config/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	fakeconfigclient "github.com/openshift/client-go/config/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -86,30 +85,6 @@ func TestGetClusterIDFailed(t *testing.T) {
 	_, err := GetClusterID(client)
 	if err == nil {
 		t.Errorf("Should throw the error since there is no clusterversion defined")
-	}
-}
-
-func TestGetObsAPIHost(t *testing.T) {
-	route := &routev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      obsAPIGateway,
-			Namespace: "test",
-		},
-		Spec: routev1.RouteSpec{
-			Host: apiServerURL,
-		},
-	}
-	scheme := runtime.NewScheme()
-	scheme.AddKnownTypes(routev1.GroupVersion, route)
-	client := fake.NewFakeClientWithScheme(scheme, route)
-
-	host, _ := GetObsAPIHost(client, "default")
-	if host == apiServerURL {
-		t.Errorf("Should not get route host in default namespace")
-	}
-	host, _ = GetObsAPIHost(client, "test")
-	if host != apiServerURL {
-		t.Errorf("Observatorium api (%v) is not the expected (%v)", host, apiServerURL)
 	}
 }
 
@@ -495,7 +470,7 @@ func TestGetOperandName(t *testing.T) {
 				SetOperandNames(fake.NewFakeClientWithScheme(runtime.NewScheme()))
 			},
 			result: func() bool {
-				return GetOperandName(Alertmanager) == GetOperandNamePrefix()+"alertmanager"
+				return GetOperandName(Alertmanager) == config.GetOperandNamePrefix()+"alertmanager"
 			},
 		},
 		{
@@ -521,7 +496,7 @@ func TestGetOperandName(t *testing.T) {
 
 				observatorium := &observatoriumv1alpha1.Observatorium{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      GetOperandNamePrefix() + "-observatorium",
+						Name:      config.GetOperandNamePrefix() + "-observatorium",
 						Namespace: config.GetDefaultNamespace(),
 					},
 				}
@@ -535,8 +510,8 @@ func TestGetOperandName(t *testing.T) {
 				SetOperandNames(client)
 			},
 			result: func() bool {
-				return GetOperandName(Alertmanager) == GetOperandNamePrefix()+Alertmanager &&
-					GetOperandName(Grafana) == GetOperandNamePrefix()+Grafana &&
+				return GetOperandName(Alertmanager) == config.GetOperandNamePrefix()+Alertmanager &&
+					GetOperandName(Grafana) == config.GetOperandNamePrefix()+Grafana &&
 					GetOperandName(Observatorium) == config.GetDefaultCRName()
 			},
 		},
@@ -563,7 +538,7 @@ func TestGetOperandName(t *testing.T) {
 
 				observatorium := &observatoriumv1alpha1.Observatorium{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      GetOperandNamePrefix() + "observatorium",
+						Name:      config.GetOperandNamePrefix() + "observatorium",
 						Namespace: config.GetDefaultNamespace(),
 						OwnerReferences: []metav1.OwnerReference{
 							{
@@ -586,7 +561,7 @@ func TestGetOperandName(t *testing.T) {
 			result: func() bool {
 				return GetOperandName(Alertmanager) == Alertmanager &&
 					GetOperandName(Grafana) == Grafana &&
-					GetOperandName(Observatorium) == GetOperandNamePrefix()+"observatorium"
+					GetOperandName(Observatorium) == config.GetOperandNamePrefix()+"observatorium"
 			},
 		},
 		{
@@ -633,8 +608,8 @@ func TestGetOperandName(t *testing.T) {
 				SetOperandNames(client)
 			},
 			result: func() bool {
-				return GetOperandName(Alertmanager) == GetOperandNamePrefix()+Alertmanager &&
-					GetOperandName(Grafana) == GetOperandNamePrefix()+Grafana &&
+				return GetOperandName(Alertmanager) == config.GetOperandNamePrefix()+Alertmanager &&
+					GetOperandName(Grafana) == config.GetOperandNamePrefix()+Grafana &&
 					GetOperandName(Observatorium) == config.GetDefaultCRName()
 			},
 		},

@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/pkg/config"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
@@ -42,7 +41,7 @@ func newTestObsApiRoute() *routev1.Route {
 func newTestAlertmanagerRoute() *routev1.Route {
 	return &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.AlertmanagerRouteName,
+			Name:      operatorsconfig.AlertmanagerRouteName,
 			Namespace: mcoNamespace,
 		},
 		Spec: routev1.RouteSpec{
