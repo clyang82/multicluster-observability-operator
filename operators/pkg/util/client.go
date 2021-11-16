@@ -13,7 +13,7 @@ import (
 	crdClientSet "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -21,25 +21,21 @@ import (
 )
 
 var (
-	kubeClient kubernetes.Interface
-	crdClient  crdClientSet.Interface
-	ocpClient  ocpClientSet.Interface
+	crdClient crdClientSet.Interface
+	ocpClient ocpClientSet.Interface
 )
 
 // GetOrCreateKubeClient gets existing kubeclient or creates new one if it doesn't exist
-func GetOrCreateKubeClient() (kubernetes.Interface, error) {
-	if kubeClient != nil {
-		return kubeClient, nil
-	}
+func CreateKubeClient(kubeconfigPath string, schema *runtime.Scheme) (client.Client, error) {
 	// create the config from the path
-	config, err := clientcmd.BuildConfigFromFlags("", "")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		log.Error(err, "Failed to create the config")
 		return nil, err
 	}
 
 	// generate the client based off of the config
-	kubeClient, err = kubernetes.NewForConfig(config)
+	kubeClient, err := client.New(config, client.Options{Scheme: schema})
 	if err != nil {
 		log.Error(err, "Failed to create kube client")
 		return nil, err

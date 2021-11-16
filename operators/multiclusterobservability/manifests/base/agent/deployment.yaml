@@ -67,3 +67,13 @@ spec:
             value: /usr/local/manifests
           - name: SPOKE_NAMESPACE
             value: open-cluster-management-addon-observability
+          - name: OBSERVABILITY_CORE_KUBECONFIG
+            value: "/observability/core-kubeconfig/kubeconfig"
+        volumeMounts:
+          - name: observability-core-kubeconfig-secret
+            mountPath: "/observability/core-kubeconfig"
+            readOnly: true
+      volumes:
+        - name: observability-core-kubeconfig-secret
+          secret:
+            secretName: observability-core-kubeconfig

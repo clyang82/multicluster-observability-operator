@@ -68,6 +68,7 @@ type ObservabilityAgentReconciler struct {
 	Scheme     *runtime.Scheme
 	CRDMap     map[string]bool
 	RESTMapper meta.RESTMapper
+	KubeClient client.Client
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -82,12 +83,12 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// setup ocm addon manager
-	certctrl.Start(r.Client)
+	certctrl.Start()
 
 	deleteAll := false
 	// Fetch the MultiClusterObservability instance
 	mco := &mcov1beta2.MultiClusterObservability{}
-	err := r.Client.Get(context.TODO(),
+	err := r.KubeClient.Get(context.TODO(),
 		types.NamespacedName{
 			Name: operatorsconfig.GetMonitoringCRName(),
 		}, mco)
@@ -117,7 +118,7 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// check if the server certificate for managedcluster
 	if managedClusterObsCert == nil {
 		var err error
-		managedClusterObsCert, err = generateObservabilityServerCACerts(r.Client)
+		managedClusterObsCert, err = generateObservabilityServerCACerts(r.KubeClient)
 		if err != nil && k8serrors.IsNotFound(err) {
 			// if the servser certificate for managedcluster is not ready, then requeue the request after 10s to avoid useless reconcile loop.
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
@@ -140,7 +141,7 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	if !deleteAll {
-		res, err := createAllRelatedRes(r.Client, r.RESTMapper, req, mco, obsAddonList, r.CRDMap[operatorsconfig.IngressControllerCRD])
+		res, err := createAllRelatedRes(r.Client, r.KubeClient, r.RESTMapper, req, mco, obsAddonList, r.CRDMap[operatorsconfig.IngressControllerCRD])
 		if err != nil {
 			return res, err
 		}
@@ -242,6 +243,7 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 func createAllRelatedRes(
 	c client.Client,
+	kubeClient client.Client,
 	restMapper meta.RESTMapper,
 	request ctrl.Request,
 	mco *mcov1beta2.MultiClusterObservability,
@@ -288,7 +290,7 @@ func createAllRelatedRes(
 	// regenerate the hubinfo secret if empty
 	if hubInfoSecret == nil {
 		var err error
-		if hubInfoSecret, err = generateHubInfoSecret(c, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, ingressCtlCrdExists); err != nil {
+		if hubInfoSecret, err = generateHubInfoSecret(kubeClient, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, ingressCtlCrdExists); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

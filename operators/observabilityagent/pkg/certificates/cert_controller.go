@@ -8,7 +8,6 @@ import (
 	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
@@ -18,7 +17,7 @@ var (
 	log = logf.Log.WithName("observabilityagent_certificates")
 )
 
-func Start(c client.Client) {
+func Start() {
 
 	// setup ocm addon manager
 	addonMgr, err := addonmanager.New(ctrl.GetConfigOrDie())

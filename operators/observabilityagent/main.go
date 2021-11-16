@@ -81,6 +81,12 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	kubeClient, err := util.CreateKubeClient("/observability/core-kubeconfig/kubeconfig", scheme)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the Kube client")
+		os.Exit(1)
+	}
+
 	crdClient, err := util.GetOrCreateCRDClient()
 	if err != nil {
 		setupLog.Error(err, "Failed to create the CRD client")
@@ -153,6 +159,7 @@ func main() {
 
 	if err = (&observabilityagentctl.ObservabilityAgentReconciler{
 		Client:     mgr.GetClient(),
+		KubeClient: kubeClient,
 		Log:        ctrl.Log.WithName("controllers").WithName("ObservabilityAgent"),
 		Scheme:     mgr.GetScheme(),
 		CRDMap:     crdMaps,
