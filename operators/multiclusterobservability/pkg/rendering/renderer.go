@@ -44,7 +44,9 @@ func NewMCORenderer(multipleClusterMonitoring *obv1beta2.MultiClusterObservabili
 	mcoRenderer.newAlertManagerRenderer()
 	mcoRenderer.newThanosRenderer()
 	mcoRenderer.newProxyRenderer()
-	mcoRenderer.newAgentRenderer()
+	if !multipleClusterMonitoring.Spec.SeparateAgent {
+		mcoRenderer.newAgentRenderer()
+	}
 	return mcoRenderer
 }
 
@@ -63,16 +65,18 @@ func (r *MCORenderer) Render() ([]*unstructured.Unstructured, error) {
 		return nil, err
 	}
 
-	// load and render agent templates
-	agentTemplates, err := templates.GetOrLoadAgentTemplates(templatesutil.GetTemplateRenderer())
-	if err != nil {
-		return nil, err
+	if !r.cr.Spec.SeparateAgent {
+		// load and render agent templates
+		agentTemplates, err := templates.GetOrLoadAgentTemplates(templatesutil.GetTemplateRenderer())
+		if err != nil {
+			return nil, err
+		}
+		agentResources, err := r.renderAgentTemplates(agentTemplates, namespace, labels)
+		if err != nil {
+			return nil, err
+		}
+		resources = append(resources, agentResources...)
 	}
-	agentResources, err := r.renderAgentTemplates(agentTemplates, namespace, labels)
-	if err != nil {
-		return nil, err
-	}
-	resources = append(resources, agentResources...)
 
 	// load and render grafana templates
 	grafanaTemplates, err := templates.GetOrLoadGrafanaTemplates(templatesutil.GetTemplateRenderer())

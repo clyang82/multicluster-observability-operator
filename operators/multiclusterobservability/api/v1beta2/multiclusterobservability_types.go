@@ -34,6 +34,10 @@ type MultiClusterObservabilitySpec struct {
 	// Specifies the storage to be used by Observability
 	// +required
 	StorageConfig *StorageConfig `json:"storageConfig"`
+	// Separate agent from the observability core.
+	// +optional
+	// +kubebuilder:default:=false
+	SeparateAgent bool `json:"separateAgent"`
 	// The ObservabilityAddonSpec defines the global settings for all managed
 	// clusters which have observability add-on enabled.
 	// +required

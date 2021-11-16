@@ -691,6 +691,10 @@ spec:
                         type: object
                     type: object
                 type: object
+              separateAgent:
+                default: false
+                description: Separate agent from the observability core.
+                type: boolean
               storageConfig:
                 description: Specifies the storage to be used by Observability
                 properties:
