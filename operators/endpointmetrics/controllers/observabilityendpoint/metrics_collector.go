@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/rendering"
-	oashared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
+	oashared "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/shared"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 

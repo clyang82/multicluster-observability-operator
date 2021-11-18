@@ -25,7 +25,7 @@ import (
 
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/rendering"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/util"
-	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
+	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta1"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/deploying"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"

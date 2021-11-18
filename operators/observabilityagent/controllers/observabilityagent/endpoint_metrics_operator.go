@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/kustomize/v3/pkg/resource"
 
-	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/rendering/templates"
+	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta2"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	operatorstemplates "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering/templates"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"

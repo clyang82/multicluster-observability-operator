@@ -28,7 +28,7 @@ import (
 	statusctl "github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/controllers/status"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/pkg/util"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/endpointmetrics/version"
-	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
+	oav1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta1"
 	operatorsutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	// +kubebuilder:scaffold:imports
 )

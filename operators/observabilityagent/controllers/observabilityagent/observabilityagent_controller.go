@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,23 +19,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
-	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	certctrl "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/certificates"
-	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/util"
+	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta1"
+	mcov1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta2"
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	operatorutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	mchv1 "github.com/open-cluster-management/multiclusterhub-operator/pkg/apis/operator/v1"
@@ -451,7 +447,7 @@ func updateManagedClusterList(obj client.Object) {
 // SetupWithManager sets up the controller with the Manager.
 func (r *ObservabilityAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c := mgr.GetClient()
-	ingressCtlCrdExists, _ := r.CRDMap[operatorsconfig.IngressControllerCRD]
+	//ingressCtlCrdExists, _ := r.CRDMap[operatorsconfig.IngressControllerCRD]
 	clusterPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			log.Info("CreateFunc", "managedCluster", e.Object.GetName())
@@ -507,91 +503,114 @@ func (r *ObservabilityAgentReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		},
 	}
 
-	mcoPred := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			operatorsconfig.SetMonitoringCRName(e.Object.GetName())
-			// generate the image pull secret
-			pullSecret, _ = generatePullSecret(c, operatorsconfig.GetImagePullSecret(e.Object.(*mcov1beta2.MultiClusterObservability).Spec))
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			// only reconcile when ObservabilityAddonSpec updated
-			if e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() &&
-				!reflect.DeepEqual(e.ObjectNew.(*mcov1beta2.MultiClusterObservability).Spec.ObservabilityAddonSpec,
-					e.ObjectOld.(*mcov1beta2.MultiClusterObservability).Spec.ObservabilityAddonSpec) {
-				if e.ObjectNew.(*mcov1beta2.MultiClusterObservability).Spec.ImagePullSecret != e.ObjectOld.(*mcov1beta2.MultiClusterObservability).Spec.ImagePullSecret {
-					// regenerate the image pull secret
-					pullSecret, _ = generatePullSecret(c, operatorsconfig.GetImagePullSecret(e.ObjectNew.(*mcov1beta2.MultiClusterObservability).Spec))
+	ctrBuilder := ctrl.NewControllerManagedBy(mgr).
+		// Watch for changes to primary resource ManagedCluster with predicate
+		For(&clusterv1.ManagedCluster{}, builder.WithPredicates(clusterPred)).
+		// secondary watch for observabilityaddon
+		Watches(&source.Kind{Type: &mcov1beta1.ObservabilityAddon{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(obsAddonPred))
+		// secondary watch for MCO
+		// Watches(&source.Kind{Type: &mcov1beta2.MultiClusterObservability{}}, handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		// 	return []reconcile.Request{
+		// 		{NamespacedName: types.NamespacedName{
+		// 			Name: operatorsconfig.MCOUpdatedRequestName,
+		// 		}},
+		// 	}
+		// }), builder.WithPredicates(mcoPred)).
+		// secondary watch for custom allowlist configmap
+		//Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(customAllowlistPred)).
+		// secondary watch for certificate secrets
+		//Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(certSecretPred)).
+		// secondary watch for alertmanager accessor serviceaccount
+		//Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(amAccessorSAPred))
+
+	manifestWorkGroupKind := schema.GroupKind{Group: workv1.GroupVersion.Group, Kind: "ManifestWork"}
+	if _, err := r.RESTMapper.RESTMapping(manifestWorkGroupKind, workv1.GroupVersion.Version); err == nil {
+		workPred := predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				return false
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				if e.ObjectNew.GetLabels()[ownerLabelKey] == ownerLabelValue &&
+					e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() &&
+					!reflect.DeepEqual(e.ObjectNew.(*workv1.ManifestWork).Spec.Workload.Manifests,
+						e.ObjectOld.(*workv1.ManifestWork).Spec.Workload.Manifests) {
+					return true
 				}
-				return true
-			}
-			return false
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return true
-		},
+				return false
+			},
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return e.Object.GetLabels()[ownerLabelKey] == ownerLabelValue
+			},
+		}
+
+		// secondary watch for manifestwork
+		ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &workv1.ManifestWork{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(workPred))
 	}
 
-	customAllowlistPred := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Object.GetName() == config.AllowlistCustomConfigMapName &&
-				e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() {
-				// generate the metrics allowlist configmap
-				log.Info("generate metric allow list configmap for custom configmap CREATE")
-				metricsAllowlistConfigMap, _ = generateMetricsListCM(c)
-				return true
-			}
-			return false
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.ObjectNew.GetName() == config.AllowlistCustomConfigMapName &&
-				e.ObjectNew.GetNamespace() == operatorsconfig.GetDefaultNamespace() &&
-				e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() {
-				// regenerate the metrics allowlist configmap
-				log.Info("generate metric allow list configmap for custom configmap UPDATE")
-				metricsAllowlistConfigMap, _ = generateMetricsListCM(c)
-				return true
-			}
-			return false
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			if e.Object.GetName() == config.AllowlistCustomConfigMapName &&
-				e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() {
-				// regenerate the metrics allowlist configmap
-				log.Info("generate metric allow list configmap for custom configmap UPDATE")
-				metricsAllowlistConfigMap, _ = generateMetricsListCM(c)
-				return true
-			}
-			return false
-		},
+	mchGroupKind := schema.GroupKind{Group: mchv1.SchemeGroupVersion.Group, Kind: "MultiClusterHub"}
+	if _, err := r.RESTMapper.RESTMapping(mchGroupKind, mchv1.SchemeGroupVersion.Version); err == nil {
+		mchPred := predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				// this is for operator restart, the mch CREATE event will be caught and the mch should be ready
+				if e.Object.GetNamespace() == operatorsconfig.GetMCONamespace() &&
+					e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion != "" &&
+					e.Object.(*mchv1.MultiClusterHub).Status.DesiredVersion == e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion {
+					// only read the image manifests configmap and enqueue the request when the MCH is installed/upgraded successfully
+					ok, err := operatorsconfig.ReadImageManifestConfigMap(c, e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion)
+					if err != nil {
+						return false
+					}
+					return ok
+				}
+				return false
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				if e.ObjectNew.GetNamespace() == operatorsconfig.GetMCONamespace() &&
+					e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() &&
+					e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion != "" &&
+					e.ObjectNew.(*mchv1.MultiClusterHub).Status.DesiredVersion == e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion {
+					/// only read the image manifests configmap and enqueue the request when the MCH is installed/upgraded successfully
+					ok, err := operatorsconfig.ReadImageManifestConfigMap(c, e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion)
+					if err != nil {
+						return false
+					}
+					return ok
+				}
+				return false
+			},
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return false
+			},
+		}
+
+		// if ingressCtlCrdExists {
+		// 	// secondary watch for default ingresscontroller
+		// 	ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &operatorv1.IngressController{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(ingressControllerPred)).
+		// 		// secondary watch for alertmanager route byo cert secrets
+		// 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(amRouterCertSecretPred)).
+		// 		// secondary watch for openshift route ca secret
+		// 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(routeCASecretPred))
+		// }
+
+		mchCrdExists, _ := r.CRDMap[operatorsconfig.MCHCrdName]
+		if mchCrdExists {
+			// secondary watch for MCH
+			ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &mchv1.MultiClusterHub{}}, handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{
+						Name:      operatorsconfig.MCHUpdatedRequestName,
+						Namespace: obj.GetNamespace(),
+					}},
+				}
+			}), builder.WithPredicates(mchPred))
+		}
 	}
 
-	certSecretPred := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Object.GetName() == operatorsconfig.ServerCACerts &&
-				e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() {
-				// generate the certificate for managed cluster
-				log.Info("generate managedcluster observability certificate for server certificate CREATE")
-				managedClusterObsCert, _ = generateObservabilityServerCACerts(c)
-				return true
-			}
-			return false
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if (e.ObjectNew.GetName() == operatorsconfig.ServerCACerts &&
-				e.ObjectNew.GetNamespace() == operatorsconfig.GetDefaultNamespace()) &&
-				e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() {
-				// regenerate the certificate for managed cluster
-				log.Info("generate managedcluster observability certificate for server certificate UPDATE")
-				managedClusterObsCert, _ = generateObservabilityServerCACerts(c)
-				return true
-			}
-			return false
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return false
-		},
-	}
+	// create and return a new controller
+	return ctrBuilder.Complete(r)
+}
+
+/*
 
 	ingressControllerPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -687,162 +706,4 @@ func (r *ObservabilityAgentReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		},
 	}
 
-	amAccessorSAPred := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Object.GetName() == config.AlertmanagerAccessorSAName &&
-				e.Object.GetNamespace() == operatorsconfig.GetDefaultNamespace() {
-				// wait 10s for access_token of alertmanager and generate the secret that contains the access_token
-				/* #nosec */
-				wait.Poll(2*time.Second, 10*time.Second, func() (bool, error) {
-					var err error
-					log.Info("generate amAccessorTokenSecret for alertmanager access serviceaccount CREATE")
-					if amAccessorTokenSecret, err = generateAmAccessorTokenSecret(c); err == nil {
-						return true, nil
-					}
-					return false, err
-				})
-				return true
-			}
-			return false
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if (e.ObjectNew.GetName() == config.AlertmanagerAccessorSAName &&
-				e.ObjectNew.GetNamespace() == operatorsconfig.GetDefaultNamespace()) &&
-				e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() {
-				// regenerate the secret that contains the access_token for the Alertmanager in the Hub cluster
-				amAccessorTokenSecret, _ = generateAmAccessorTokenSecret(c)
-				return true
-			}
-			return false
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return false
-		},
-	}
-
-	ctrBuilder := ctrl.NewControllerManagedBy(mgr).
-		// Watch for changes to primary resource ManagedCluster with predicate
-		For(&clusterv1.ManagedCluster{}, builder.WithPredicates(clusterPred)).
-		// secondary watch for observabilityaddon
-		Watches(&source.Kind{Type: &mcov1beta1.ObservabilityAddon{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(obsAddonPred)).
-		// secondary watch for MCO
-		Watches(&source.Kind{Type: &mcov1beta2.MultiClusterObservability{}}, handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{
-					Name: operatorsconfig.MCOUpdatedRequestName,
-				}},
-			}
-		}), builder.WithPredicates(mcoPred)).
-		// secondary watch for custom allowlist configmap
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(customAllowlistPred)).
-		// secondary watch for certificate secrets
-		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(certSecretPred)).
-		// secondary watch for alertmanager accessor serviceaccount
-		Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(amAccessorSAPred))
-
-	manifestWorkGroupKind := schema.GroupKind{Group: workv1.GroupVersion.Group, Kind: "ManifestWork"}
-	if _, err := r.RESTMapper.RESTMapping(manifestWorkGroupKind, workv1.GroupVersion.Version); err == nil {
-		workPred := predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool {
-				return false
-			},
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.ObjectNew.GetLabels()[ownerLabelKey] == ownerLabelValue &&
-					e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() &&
-					!reflect.DeepEqual(e.ObjectNew.(*workv1.ManifestWork).Spec.Workload.Manifests,
-						e.ObjectOld.(*workv1.ManifestWork).Spec.Workload.Manifests) {
-					return true
-				}
-				return false
-			},
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return e.Object.GetLabels()[ownerLabelKey] == ownerLabelValue
-			},
-		}
-
-		// secondary watch for manifestwork
-		ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &workv1.ManifestWork{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(workPred))
-	}
-
-	mchGroupKind := schema.GroupKind{Group: mchv1.SchemeGroupVersion.Group, Kind: "MultiClusterHub"}
-	if _, err := r.RESTMapper.RESTMapping(mchGroupKind, mchv1.SchemeGroupVersion.Version); err == nil {
-		mchPred := predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool {
-				// this is for operator restart, the mch CREATE event will be caught and the mch should be ready
-				if e.Object.GetNamespace() == operatorsconfig.GetMCONamespace() &&
-					e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion != "" &&
-					e.Object.(*mchv1.MultiClusterHub).Status.DesiredVersion == e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion {
-					// only read the image manifests configmap and enqueue the request when the MCH is installed/upgraded successfully
-					ok, err := operatorsconfig.ReadImageManifestConfigMap(c, e.Object.(*mchv1.MultiClusterHub).Status.CurrentVersion)
-					if err != nil {
-						return false
-					}
-					return ok
-				}
-				return false
-			},
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.ObjectNew.GetNamespace() == operatorsconfig.GetMCONamespace() &&
-					e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion() &&
-					e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion != "" &&
-					e.ObjectNew.(*mchv1.MultiClusterHub).Status.DesiredVersion == e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion {
-					/// only read the image manifests configmap and enqueue the request when the MCH is installed/upgraded successfully
-					ok, err := operatorsconfig.ReadImageManifestConfigMap(c, e.ObjectNew.(*mchv1.MultiClusterHub).Status.CurrentVersion)
-					if err != nil {
-						return false
-					}
-					return ok
-				}
-				return false
-			},
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return false
-			},
-		}
-
-		if ingressCtlCrdExists {
-			// secondary watch for default ingresscontroller
-			ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &operatorv1.IngressController{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(ingressControllerPred)).
-				// secondary watch for alertmanager route byo cert secrets
-				Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(amRouterCertSecretPred)).
-				// secondary watch for openshift route ca secret
-				Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(routeCASecretPred))
-		}
-
-		mchCrdExists, _ := r.CRDMap[operatorsconfig.MCHCrdName]
-		if mchCrdExists {
-			// secondary watch for MCH
-			ctrBuilder = ctrBuilder.Watches(&source.Kind{Type: &mchv1.MultiClusterHub{}}, handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-				return []reconcile.Request{
-					{NamespacedName: types.NamespacedName{
-						Name:      operatorsconfig.MCHUpdatedRequestName,
-						Namespace: obj.GetNamespace(),
-					}},
-				}
-			}), builder.WithPredicates(mchPred))
-		}
-	}
-
-	// create and return a new controller
-	return ctrBuilder.Complete(r)
-}
-
-func StartPlacementController(mgr manager.Manager, crdMap map[string]bool) error {
-	if isplacementControllerRunnning {
-		return nil
-	}
-	isplacementControllerRunnning = true
-
-	if err := (&ObservabilityAgentReconciler{
-		Client:     mgr.GetClient(),
-		Log:        ctrl.Log.WithName("controllers").WithName("ObservabilityAgent"),
-		Scheme:     mgr.GetScheme(),
-		CRDMap:     crdMap,
-		RESTMapper: mgr.GetRESTMapper(),
-	}).SetupWithManager(mgr); err != nil {
-		log.Error(err, "unable to create controller", "controller", "ObservabilityAgent")
-		return err
-	}
-
-	return nil
-}
+*/

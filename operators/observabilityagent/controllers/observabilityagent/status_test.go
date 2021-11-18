@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/util"
+	mcov1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"

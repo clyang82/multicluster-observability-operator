@@ -30,17 +30,20 @@ import (
 
 	"github.com/IBM/controller-filtered-cache/filteredcache"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	oinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/informers"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	observabilityv1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta1"
-	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/v1beta2"
 	observabilityagentctl "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/controllers/observabilityagent"
+	mcoinformers "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/client/informers/externalversions"
+	observabilityv1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta1"
+	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta2"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 	addonv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
@@ -55,6 +58,8 @@ var (
 
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+
+	kubeconfigPath = "/observability/core-kubeconfig/kubeconfig"
 )
 
 func init() {
@@ -80,12 +85,6 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	kubeClient, err := util.CreateKubeClient("/observability/core-kubeconfig/kubeconfig", scheme)
-	if err != nil {
-		setupLog.Error(err, "Failed to create the Kube client")
-		os.Exit(1)
-	}
 
 	crdClient, err := util.GetOrCreateCRDClient()
 	if err != nil {
@@ -157,6 +156,12 @@ func main() {
 		config.MCOCrdName: mcoCrdExists,
 	}
 
+	kubeClient, err := util.CreateKubeClient(kubeconfigPath, scheme)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the Kube client")
+		os.Exit(1)
+	}
+
 	if err = (&observabilityagentctl.ObservabilityAgentReconciler{
 		Client:     mgr.GetClient(),
 		KubeClient: kubeClient,
@@ -180,6 +185,34 @@ func main() {
 	}
 	if err := util.RegisterDebugEndpoint(mgr.AddMetricsExtraHandler); err != nil {
 		setupLog.Error(err, "unable to set up debug handler")
+		os.Exit(1)
+	}
+
+	kubeClientset, err := util.CreateKubeClientset(kubeconfigPath)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the Kube client")
+		os.Exit(1)
+	}
+
+	ocpClientset, err := util.CreateOCPOperatorClientset(kubeconfigPath)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the ocp operator clientset")
+		os.Exit(1)
+	}
+
+	mcoClientset, err := util.CreateMCOClientset(kubeconfigPath)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the ocp client")
+		os.Exit(1)
+	}
+
+	setupLog.Info("add watch observability-core-controller to manager")
+	controller := observabilityagentctl.NewObservabilityCoreController(
+		informers.NewSharedInformerFactory(kubeClientset, 0),
+		oinformers.NewSharedInformerFactory(ocpClientset, 0),
+		mcoinformers.NewSharedInformerFactory(mcoClientset, 0), kubeClient)
+	if err := mgr.Add(controller); err != nil {
+		setupLog.Error(err, "unable to add webhook controller to manager")
 		os.Exit(1)
 	}
 

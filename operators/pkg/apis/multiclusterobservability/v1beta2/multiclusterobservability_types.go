@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	observabilityshared "github.com/open-cluster-management/multicluster-observability-operator/operators/multiclusterobservability/api/shared"
+	observabilityshared "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/shared"
 )
 
 // MultiClusterObservabilitySpec defines the desired state of MultiClusterObservability
@@ -189,14 +189,7 @@ type MultiClusterObservabilityStatus struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:storageversion
-
-// MultiClusterObservability defines the configuration for the Observability installation on
-// Hub and Managed Clusters all through this one custom resource.
-// +kubebuilder:pruning:PreserveUnknownFields
-// +kubebuilder:resource:path=multiclusterobservabilities,scope=Cluster,shortName=mco
-// +operator-sdk:csv:customresourcedefinitions:displayName="MultiClusterObservability"
+// +genclient:nonNamespaced
 type MultiClusterObservability struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
