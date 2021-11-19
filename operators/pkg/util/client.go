@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	ocpClientSet "github.com/openshift/client-go/config/clientset/versioned"
 	ocpOperatorClientset "github.com/openshift/client-go/operator/clientset/versioned"
+	ocpRouteClientSet "github.com/openshift/client-go/route/clientset/versioned"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	crdClientSet "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -25,7 +25,6 @@ import (
 
 var (
 	crdClient crdClientSet.Interface
-	ocpClient ocpClientSet.Interface
 )
 
 // CreateKubeClient creates new kube client
@@ -65,8 +64,8 @@ func CreateKubeClientset(kubeconfigPath string) (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-// CreateOCPClient creates ocp client
-func CreateOCPClient(kubeconfigPath string) (ocpClientSet.Interface, error) {
+// CreateOCPRouteClient creates ocp client
+func CreateOCPRouteClient(kubeconfigPath string) (*ocpRouteClientSet.Clientset, error) {
 	// create the config from the path
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
@@ -75,13 +74,13 @@ func CreateOCPClient(kubeconfigPath string) (ocpClientSet.Interface, error) {
 	}
 
 	// generate the client based off of the config
-	ocpClient, err = ocpClientSet.NewForConfig(config)
+	ocpClientset, err := ocpRouteClientSet.NewForConfig(config)
 	if err != nil {
 		log.Error(err, "Failed to create ocp config client")
 		return nil, err
 	}
 
-	return ocpClient, err
+	return ocpClientset, err
 }
 
 func CreateOCPOperatorClientset(kubeconfigPath string) (*ocpOperatorClientset.Clientset, error) {

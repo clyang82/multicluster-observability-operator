@@ -5,12 +5,15 @@ package config
 
 import (
 	"context"
+	"fmt"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	routev1 "github.com/openshift/api/route/v1"
+	operatorclientset "github.com/openshift/client-go/operator/clientset/versioned"
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -82,13 +85,13 @@ func GetOBAResources(oba *mcoshared.ObservabilityAddonSpec) *corev1.ResourceRequ
 }
 
 // GetAlertmanagerEndpoint is used to get the URL for alertmanager
-func GetAlertmanagerEndpoint(client client.Client, namespace string) (string, error) {
-	found := &routev1.Route{}
+func GetAlertmanagerEndpoint(client routeclientset.Clientset,
+	operatorClient operatorclientset.Clientset, namespace string) (string, error) {
 
-	err := client.Get(context.TODO(), types.NamespacedName{Name: config.AlertmanagerRouteName, Namespace: namespace}, found)
+	alertRoute, err := client.RouteV1().Routes(namespace).Get(context.TODO(), config.AlertmanagerRouteName, metav1.GetOptions{})
 	if err != nil && errors.IsNotFound(err) {
 		// if the alertmanager router is not created yet, fallback to get host from the domain of ingresscontroller
-		domain, err := config.GetDomainForIngressController(client, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
+		domain, err := getDomainForIngressController(operatorClient, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
 		if err != nil {
 			return "", nil
 		}
@@ -96,7 +99,7 @@ func GetAlertmanagerEndpoint(client client.Client, namespace string) (string, er
 	} else if err != nil {
 		return "", err
 	}
-	return found.Spec.Host, nil
+	return alertRoute.Spec.Host, nil
 }
 
 // GetAlertmanagerRouterCA is used to get the CA of openshift Route
@@ -138,4 +141,37 @@ func GetAlertmanagerCA(client client.Client) (string, error) {
 		return "", err
 	}
 	return string(amCAConfigmap.Data["service-ca.crt"]), nil
+}
+
+// getDomainForIngressController get the domain for the given ingresscontroller instance
+func getDomainForIngressController(operatorClient operatorclientset.Clientset, name, namespace string) (string, error) {
+	ingressOperatorInstance, err := operatorClient.OperatorV1().IngressControllers(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+
+	if err != nil {
+		return "", err
+	}
+	domain := ingressOperatorInstance.Status.Domain
+	if domain == "" {
+		return "", fmt.Errorf("no domain found in the ingressOperator: %s/%s.", namespace, name)
+	}
+	return domain, nil
+}
+
+// GetObsAPIHost is used to get the URL for observartium api gateway
+func GetObsAPIHost(client routeclientset.Clientset,
+	operatorClient operatorclientset.Clientset, namespace string) (string, error) {
+
+	obsRoute, err := client.RouteV1().Routes(namespace).Get(context.TODO(), config.ObsAPIGateway, metav1.GetOptions{})
+
+	if err != nil && errors.IsNotFound(err) {
+		// if the observatorium-api router is not created yet, fallback to get host from the domain of ingresscontroller
+		domain, err := getDomainForIngressController(operatorClient, config.OpenshiftIngressOperatorCRName, config.OpenshiftIngressOperatorNamespace)
+		if err != nil {
+			return "", nil
+		}
+		return config.ObsAPIGateway + "-" + namespace + "." + domain, nil
+	} else if err != nil {
+		return "", err
+	}
+	return obsRoute.Spec.Host, nil
 }

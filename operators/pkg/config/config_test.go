@@ -363,7 +363,7 @@ func TestReadImageManifestConfigMap(t *testing.T) {
 func TestGetObsAPIHost(t *testing.T) {
 	route := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      obsAPIGateway,
+			Name:      ObsAPIGateway,
 			Namespace: "test",
 		},
 		Spec: routev1.RouteSpec{

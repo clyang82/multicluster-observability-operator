@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	operatorclientset "github.com/openshift/client-go/operator/clientset/versioned"
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,12 +61,14 @@ var (
 
 // ObservabilityAgentReconciler
 type ObservabilityAgentReconciler struct {
-	Client     client.Client
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	CRDMap     map[string]bool
-	RESTMapper meta.RESTMapper
-	KubeClient client.Client
+	Client            client.Client
+	Log               logr.Logger
+	Scheme            *runtime.Scheme
+	CRDMap            map[string]bool
+	RESTMapper        meta.RESTMapper
+	KubeClient        client.Client
+	RouteClientset    routeclientset.Clientset
+	OperatorClientset operatorclientset.Clientset
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -137,7 +141,8 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	if !deleteAll {
-		res, err := createAllRelatedRes(r.Client, r.KubeClient, r.RESTMapper, req, mco, obsAddonList, true)
+		res, err := createAllRelatedRes(r.Client, r.KubeClient, r.RouteClientset, r.OperatorClientset, r.RESTMapper,
+			req, mco, obsAddonList, true)
 		//TODO: r.CRDMap[operatorsconfig.IngressControllerCRD] should be from obs core
 		if err != nil {
 			return res, err
@@ -241,6 +246,8 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 func createAllRelatedRes(
 	c client.Client,
 	kubeClient client.Client,
+	routeClientset routeclientset.Clientset,
+	operatorClientset operatorclientset.Clientset,
 	restMapper meta.RESTMapper,
 	request ctrl.Request,
 	mco *mcov1beta2.MultiClusterObservability,
@@ -287,7 +294,8 @@ func createAllRelatedRes(
 	// regenerate the hubinfo secret if empty
 	if hubInfoSecret == nil {
 		var err error
-		if hubInfoSecret, err = generateHubInfoSecret(kubeClient, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, ingressCtlCrdExists); err != nil {
+		if hubInfoSecret, err = generateHubInfoSecret(kubeClient, routeClientset, operatorClientset,
+			operatorsconfig.GetDefaultNamespace(), spokeNameSpace, ingressCtlCrdExists); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

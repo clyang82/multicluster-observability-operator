@@ -6,6 +6,8 @@ package observabilityagent
 import (
 	"net/url"
 
+	operatorclientset "github.com/openshift/client-go/operator/clientset/versioned"
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +19,8 @@ import (
 
 // generateHubInfoSecret generates the secret that contains hubInfo.
 // this function should only called when the watched resources are created/updated
-func generateHubInfoSecret(client client.Client, obsNamespace string,
+func generateHubInfoSecret(client client.Client, routeClient routeclientset.Clientset,
+	operatorClient operatorclientset.Clientset, obsNamespace string,
 	namespace string, ingressCtlCrdExists bool) (*corev1.Secret, error) {
 
 	obsApiRouteHost := ""
@@ -26,13 +29,13 @@ func generateHubInfoSecret(client client.Client, obsNamespace string,
 
 	if ingressCtlCrdExists {
 		var err error
-		obsApiRouteHost, err = operatorsconfig.GetObsAPIHost(client, obsNamespace)
+		obsApiRouteHost, err = config.GetObsAPIHost(routeClient, operatorClient, obsNamespace)
 		if err != nil {
 			log.Error(err, "Failed to get the host for observatorium API route")
 			return nil, err
 		}
 
-		alertmanagerEndpoint, err = config.GetAlertmanagerEndpoint(client, obsNamespace)
+		alertmanagerEndpoint, err = config.GetAlertmanagerEndpoint(routeClient, operatorClient, obsNamespace)
 		if err != nil {
 			log.Error(err, "Failed to get alertmanager endpoint")
 			return nil, err

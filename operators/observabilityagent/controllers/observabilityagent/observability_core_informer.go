@@ -10,9 +10,10 @@ import (
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	ocpClientSet "github.com/openshift/client-go/config/clientset/versioned"
+	operatorclientset "github.com/openshift/client-go/operator/clientset/versioned"
 	oinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
+	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
@@ -31,8 +32,9 @@ import (
 // ObservabilityCoreController detects observability core resources are added,
 // deleted, or updated
 type ObservabilityCoreController struct {
-	kubeClient client.Client
-	ocpClient  ocpClientSet.Interface
+	kubeClient     client.Client
+	routeClient    routeclientset.Clientset
+	operatorClient operatorclientset.Clientset
 
 	informerFactory            informers.SharedInformerFactory
 	operatorInformerfactory    oinformers.SharedInformerFactory
@@ -66,7 +68,9 @@ func (o *ObservabilityCoreController) Start(ctx context.Context) error {
 func NewObservabilityCoreController(informerFactory informers.SharedInformerFactory,
 	operatorInformerfactory oinformers.SharedInformerFactory,
 	mcoOperatorInformerfactory mcoinformers.SharedInformerFactory,
-	kubeClient client.Client) *ObservabilityCoreController {
+	kubeClient client.Client, routeClient routeclientset.Clientset,
+	operatorClient operatorclientset.Clientset) *ObservabilityCoreController {
+
 	configMapInformer := informerFactory.Core().V1().ConfigMaps()
 	secretInformer := informerFactory.Core().V1().Secrets()
 	serviceAccountInformer := informerFactory.Core().V1().ServiceAccounts()
@@ -84,7 +88,9 @@ func NewObservabilityCoreController(informerFactory informers.SharedInformerFact
 		ingressInformer:        ingressInformer,
 		mcoInformer:            mcoInformer,
 
-		kubeClient: kubeClient,
+		kubeClient:     kubeClient,
+		routeClient:    routeClient,
+		operatorClient: operatorClient,
 	}
 	configMapInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -177,7 +183,8 @@ func NewObservabilityCoreController(informerFactory informers.SharedInformerFact
 				if obj.(*operatorv1.IngressController).GetName() == operatorsconfig.OpenshiftIngressOperatorCRName &&
 					obj.(*operatorv1.IngressController).GetNamespace() == operatorsconfig.OpenshiftIngressOperatorNamespace {
 					// generate the hubInfo secret
-					hubInfoSecret, _ = generateHubInfoSecret(o.kubeClient, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true)
+					hubInfoSecret, _ = generateHubInfoSecret(o.kubeClient, o.routeClient, o.operatorClient,
+						operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true)
 				}
 			},
 			UpdateFunc: func(old, new interface{}) {
@@ -185,14 +192,16 @@ func NewObservabilityCoreController(informerFactory informers.SharedInformerFact
 					new.(*operatorv1.IngressController).GetResourceVersion() != old.(*operatorv1.IngressController).GetResourceVersion() &&
 					new.(*operatorv1.IngressController).GetNamespace() == operatorsconfig.OpenshiftIngressOperatorNamespace {
 					// regenerate the hubInfo secret
-					hubInfoSecret, _ = generateHubInfoSecret(o.kubeClient, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true)
+					hubInfoSecret, _ = generateHubInfoSecret(o.kubeClient, o.routeClient, o.operatorClient,
+						operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true)
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				if obj.(*operatorv1.IngressController).GetName() == operatorsconfig.OpenshiftIngressOperatorCRName &&
 					obj.(*operatorv1.IngressController).GetNamespace() == operatorsconfig.OpenshiftIngressOperatorNamespace {
 					// regenerate the hubInfo secret
-					hubInfoSecret, _ = generateHubInfoSecret(o.kubeClient, operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true)
+					hubInfoSecret, _ = generateHubInfoSecret(o.kubeClient, o.routeClient, o.operatorClient,
+						operatorsconfig.GetDefaultNamespace(), spokeNameSpace, true)
 				}
 			},
 			//TODO: ingressCtlCrdExists to replace true

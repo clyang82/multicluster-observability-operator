@@ -161,13 +161,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	ocpRouteClientset, err := util.CreateOCPRouteClient(agentconfig.OBSCoreKubeconfigPath)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the OCP clientset")
+		os.Exit(1)
+	}
+
+	ocpOperatorClientset, err := util.CreateOCPOperatorClientset(agentconfig.OBSCoreKubeconfigPath)
+	if err != nil {
+		setupLog.Error(err, "Failed to create the ocp operator clientset")
+		os.Exit(1)
+	}
+
 	if err = (&observabilityagentctl.ObservabilityAgentReconciler{
-		Client:     mgr.GetClient(),
-		KubeClient: kubeClient,
-		Log:        ctrl.Log.WithName("controllers").WithName("ObservabilityAgent"),
-		Scheme:     mgr.GetScheme(),
-		CRDMap:     crdMaps,
-		RESTMapper: mgr.GetRESTMapper(),
+		Client:            mgr.GetClient(),
+		KubeClient:        kubeClient,
+		RouteClientset:    *ocpRouteClientset,
+		OperatorClientset: *ocpOperatorClientset,
+		Log:               ctrl.Log.WithName("controllers").WithName("ObservabilityAgent"),
+		Scheme:            mgr.GetScheme(),
+		CRDMap:            crdMaps,
+		RESTMapper:        mgr.GetRESTMapper(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ObservabilityAgent")
 		os.Exit(1)
@@ -193,12 +207,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	ocpClientset, err := util.CreateOCPOperatorClientset(agentconfig.OBSCoreKubeconfigPath)
-	if err != nil {
-		setupLog.Error(err, "Failed to create the ocp operator clientset")
-		os.Exit(1)
-	}
-
 	mcoClientset, err := util.CreateMCOClientset(agentconfig.OBSCoreKubeconfigPath)
 	if err != nil {
 		setupLog.Error(err, "Failed to create the ocp client")
@@ -208,8 +216,9 @@ func main() {
 	setupLog.Info("add watch observability-core-controller to manager")
 	controller := observabilityagentctl.NewObservabilityCoreController(
 		informers.NewSharedInformerFactory(kubeClientset, 0),
-		oinformers.NewSharedInformerFactory(ocpClientset, 0),
-		mcoinformers.NewSharedInformerFactory(mcoClientset, 0), kubeClient)
+		oinformers.NewSharedInformerFactory(ocpOperatorClientset, 0),
+		mcoinformers.NewSharedInformerFactory(mcoClientset, 0),
+		kubeClient, *ocpRouteClientset, *ocpOperatorClientset)
 	if err := mgr.Add(controller); err != nil {
 		setupLog.Error(err, "unable to add webhook controller to manager")
 		os.Exit(1)

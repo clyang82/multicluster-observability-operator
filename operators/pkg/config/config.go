@@ -23,7 +23,7 @@ import (
 const (
 	ClusterNameKey                  = "cluster-name"
 	HubInfoSecretName               = "hub-info-secret"
-	obsAPIGateway                   = "observatorium-api"
+	ObsAPIGateway                   = "observatorium-api"
 	HubInfoSecretKey                = "hub-info.yaml" // #nosec
 	ObservatoriumAPIRemoteWritePath = "/api/metrics/v1/default/api/v1/receive"
 	AnnotationSkipCreation          = "skip-creation-if-exist"
@@ -296,14 +296,14 @@ func GetDomainForIngressController(client client.Client, name, namespace string)
 func GetObsAPIHost(client client.Client, namespace string) (string, error) {
 	found := &routev1.Route{}
 
-	err := client.Get(context.TODO(), types.NamespacedName{Name: obsAPIGateway, Namespace: namespace}, found)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: ObsAPIGateway, Namespace: namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		// if the observatorium-api router is not created yet, fallback to get host from the domain of ingresscontroller
 		domain, err := GetDomainForIngressController(client, OpenshiftIngressOperatorCRName, OpenshiftIngressOperatorNamespace)
 		if err != nil {
 			return "", nil
 		}
-		return obsAPIGateway + "-" + namespace + "." + domain, nil
+		return ObsAPIGateway + "-" + namespace + "." + domain, nil
 	} else if err != nil {
 		return "", err
 	}
