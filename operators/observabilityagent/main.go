@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	observabilityagentctl "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/controllers/observabilityagent"
+	agentconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
 	mcoinformers "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/client/informers/externalversions"
 	observabilityv1beta1 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta1"
 	observabilityv1beta2 "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/apis/multiclusterobservability/v1beta2"
@@ -58,8 +59,6 @@ var (
 
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
-
-	kubeconfigPath = "/observability/core-kubeconfig/kubeconfig"
 )
 
 func init() {
@@ -156,7 +155,7 @@ func main() {
 		config.MCOCrdName: mcoCrdExists,
 	}
 
-	kubeClient, err := util.CreateKubeClient(kubeconfigPath, scheme)
+	kubeClient, err := util.CreateKubeClient(agentconfig.OBSCoreKubeconfigPath, scheme)
 	if err != nil {
 		setupLog.Error(err, "Failed to create the Kube client")
 		os.Exit(1)
@@ -188,19 +187,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	kubeClientset, err := util.CreateKubeClientset(kubeconfigPath)
+	kubeClientset, err := util.CreateKubeClientset(agentconfig.OBSCoreKubeconfigPath)
 	if err != nil {
 		setupLog.Error(err, "Failed to create the Kube client")
 		os.Exit(1)
 	}
 
-	ocpClientset, err := util.CreateOCPOperatorClientset(kubeconfigPath)
+	ocpClientset, err := util.CreateOCPOperatorClientset(agentconfig.OBSCoreKubeconfigPath)
 	if err != nil {
 		setupLog.Error(err, "Failed to create the ocp operator clientset")
 		os.Exit(1)
 	}
 
-	mcoClientset, err := util.CreateMCOClientset(kubeconfigPath)
+	mcoClientset, err := util.CreateMCOClientset(agentconfig.OBSCoreKubeconfigPath)
 	if err != nil {
 		setupLog.Error(err, "Failed to create the ocp client")
 		os.Exit(1)

@@ -5,7 +5,6 @@ FROM registry.ci.openshift.org/open-cluster-management/builder:go1.17-linux AS b
 WORKDIR /workspace
 COPY go.sum go.mod ./
 COPY ./operators/observabilityagent ./operators/observabilityagent
-COPY ./operators/multiclusterobservability/api ./operators/multiclusterobservability/api
 COPY ./operators/pkg ./operators/pkg
 
 RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o build/_output/bin/observability-agent operators/observabilityagent/main.go

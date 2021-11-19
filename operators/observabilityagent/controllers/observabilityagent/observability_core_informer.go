@@ -74,7 +74,10 @@ func NewObservabilityCoreController(informerFactory informers.SharedInformerFact
 	mcoInformer := mcoOperatorInformerfactory.Observability().V1beta2().MultiClusterObservabilities()
 
 	o := &ObservabilityCoreController{
-		informerFactory:        informerFactory,
+		informerFactory:            informerFactory,
+		operatorInformerfactory:    operatorInformerfactory,
+		mcoOperatorInformerfactory: mcoOperatorInformerfactory,
+
 		configMapInformer:      configMapInformer,
 		secretInformer:         secretInformer,
 		serviceAccountInformer: serviceAccountInformer,
@@ -195,6 +198,7 @@ func NewObservabilityCoreController(informerFactory informers.SharedInformerFact
 			//TODO: ingressCtlCrdExists to replace true
 			// send request to trigger reconciler
 			// check amRouterCertSecretPred and routeCASecretPred secret
+			// pass namespace instead of watch all namespaces
 		},
 	)
 

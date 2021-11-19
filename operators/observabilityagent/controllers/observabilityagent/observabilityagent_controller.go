@@ -137,7 +137,8 @@ func (r *ObservabilityAgentReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	if !deleteAll {
-		res, err := createAllRelatedRes(r.Client, r.KubeClient, r.RESTMapper, req, mco, obsAddonList, r.CRDMap[operatorsconfig.IngressControllerCRD])
+		res, err := createAllRelatedRes(r.Client, r.KubeClient, r.RESTMapper, req, mco, obsAddonList, true)
+		//TODO: r.CRDMap[operatorsconfig.IngressControllerCRD] should be from obs core
 		if err != nil {
 			return res, err
 		}
@@ -278,7 +279,7 @@ func createAllRelatedRes(
 	rawExtensionList, obsAddonCRDv1, obsAddonCRDv1beta1,
 		endpointMetricsOperatorDeploy, imageListConfigMap, _ = loadTemplates(mco)
 
-	works, crdv1Work, crdv1beta1Work, err := generateGlobalManifestResources(c, mco)
+	works, crdv1Work, crdv1beta1Work, err := generateGlobalManifestResources(kubeClient, mco)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

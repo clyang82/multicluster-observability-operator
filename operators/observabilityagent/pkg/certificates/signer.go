@@ -5,18 +5,14 @@ package certificates
 
 import (
 	"errors"
-	"os"
 	"time"
 
 	"github.com/cloudflare/cfssl/config"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	agentconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/observabilityagent/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
 
@@ -25,30 +21,10 @@ var (
 	clientCACerts         = "observability-client-ca-certs"
 )
 
-func getClient(s *runtime.Scheme) (client.Client, error) {
-	if os.Getenv("TEST") != "" {
-		c := fake.NewFakeClient()
-		return c, nil
-	}
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	if err != nil {
-		return nil, errors.New("failed to create the kube config")
-	}
-	options := client.Options{}
-	if s != nil {
-		options = client.Options{Scheme: s}
-	}
-	c, err := client.New(config, options)
-	if err != nil {
-		return nil, errors.New("failed to create the kube client")
-	}
-	return c, nil
-}
-
 func sign(csr *certificatesv1.CertificateSigningRequest) []byte {
-	c, err := getClient(nil)
+	c, err := util.CreateKubeClient(agentconfig.OBSCoreKubeconfigPath, nil)
 	if err != nil {
-		log.Error(err, err.Error())
+		log.Error(err, "Failed to create the Kube client")
 		return nil
 	}
 

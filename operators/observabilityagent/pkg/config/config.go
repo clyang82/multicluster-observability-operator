@@ -31,6 +31,8 @@ const (
 	MetricsCollectorMemoryRequets = "100Mi"
 	MetricsCollectorCPULimits     = ""
 	MetricsCollectorMemoryLimits  = ""
+
+	OBSCoreKubeconfigPath = "/observability/core-kubeconfig/kubeconfig"
 )
 
 func GetOBAResources(oba *mcoshared.ObservabilityAddonSpec) *corev1.ResourceRequirements {
