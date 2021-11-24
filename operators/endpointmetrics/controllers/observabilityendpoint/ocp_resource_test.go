@@ -93,15 +93,3 @@ func TestCreateDeleteMonitoringClusterRoleBinding(t *testing.T) {
 		t.Fatalf("Run into error when try to delete delete clusterrolebinding twice: (%v)", err)
 	}
 }
-
-func TestGetClusterID(t *testing.T) {
-	ctx := context.TODO()
-	c := fake.NewFakeClient(cv)
-	found, err := getClusterID(ctx, c)
-	if err != nil {
-		t.Fatalf("Failed to get clusterversion: (%v)", err)
-	}
-	if found != testClusterID {
-		t.Fatalf("Got wrong cluster id" + found)
-	}
-}

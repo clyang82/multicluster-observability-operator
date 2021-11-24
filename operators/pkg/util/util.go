@@ -14,6 +14,7 @@ import (
 	"net/http/pprof"
 	"os"
 
+	ocinfrav1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -150,4 +151,15 @@ func GetCA(c client.Client, isServer bool) (*x509.Certificate, *rsa.PrivateKey, 
 		return nil, nil, nil, err
 	}
 	return caCerts[0], caKey, caCertBytes, nil
+}
+
+// GetClusterID is used to get the cluster uid
+func GetClusterID(ctx context.Context, c client.Client) (string, error) {
+	clusterVersion := &ocinfrav1.ClusterVersion{}
+	if err := c.Get(ctx, types.NamespacedName{Name: "version"}, clusterVersion); err != nil {
+		log.Error(err, "Failed to get clusterVersion")
+		return "", err
+	}
+
+	return string(clusterVersion.Spec.ClusterID), nil
 }

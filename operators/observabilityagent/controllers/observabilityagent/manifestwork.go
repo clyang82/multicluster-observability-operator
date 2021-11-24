@@ -363,6 +363,13 @@ func createManifestWorks(c client.Client, restMapper meta.RESTMapper,
 
 	// inject the hub info secret
 	hubInfo.Data[operatorsconfig.ClusterNameKey] = []byte(clusterName)
+	if mco.Spec.SeparateAgent {
+		cId, err := util.GetClusterID(context.TODO(), c)
+		if err != nil {
+			return err
+		}
+		hubInfo.Data[operatorsconfig.HubClusterID] = []byte(cId)
+	}
 	manifests = injectIntoWork(manifests, hubInfo)
 
 	work.Spec.Workload.Manifests = manifests

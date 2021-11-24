@@ -155,17 +155,6 @@ func createCAConfigmap(ctx context.Context, client client.Client) error {
 	return nil
 }
 
-// getClusterID is used to get the cluster uid
-func getClusterID(ctx context.Context, c client.Client) (string, error) {
-	clusterVersion := &ocinfrav1.ClusterVersion{}
-	if err := c.Get(ctx, types.NamespacedName{Name: "version"}, clusterVersion); err != nil {
-		log.Error(err, "Failed to get clusterVersion")
-		return "", err
-	}
-
-	return string(clusterVersion.Spec.ClusterID), nil
-}
-
 func isSNO(ctx context.Context, c client.Client) (bool, error) {
 	infraConfig := &ocinfrav1.Infrastructure{}
 	if err := c.Get(ctx, types.NamespacedName{Name: "cluster"}, infraConfig); err != nil {

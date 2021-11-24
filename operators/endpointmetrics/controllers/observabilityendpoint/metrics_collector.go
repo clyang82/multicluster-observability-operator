@@ -127,6 +127,9 @@ func createDeployment(clusterID string, clusterType string,
 		fmt.Sprintf("--label=\"cluster=%s\"", hubInfo.ClusterName),
 		fmt.Sprintf("--label=\"clusterID=%s\"", clusterID),
 	}
+	if hubInfo.HubClusterID != "" {
+		commands = append(commands, fmt.Sprintf("--label=\"hubClusterID=%s\"", hubInfo.HubClusterID))
+	}
 	commands = append(commands, "--from-token-file=/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if !installPrometheus {
 		commands = append(commands, "--from-ca-file="+caFile)

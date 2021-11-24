@@ -22,6 +22,7 @@ import (
 
 const (
 	ClusterNameKey                  = "cluster-name"
+	HubClusterID                    = "hub-cluster-id"
 	HubInfoSecretName               = "hub-info-secret"
 	ObsAPIGateway                   = "observatorium-api"
 	HubInfoSecretKey                = "hub-info.yaml" // #nosec
@@ -127,6 +128,7 @@ var (
 // hub router
 type HubInfo struct {
 	ClusterName              string `yaml:"cluster-name"`
+	HubClusterID             string `yaml:"hub-cluster-id"`
 	ObservatoriumAPIEndpoint string `yaml:"observatorium-api-endpoint"`
 	AlertmanagerEndpoint     string `yaml:"alertmanager-endpoint"`
 	AlertmanagerRouterCA     string `yaml:"alertmanager-router-ca"`

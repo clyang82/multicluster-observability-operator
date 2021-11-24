@@ -29,6 +29,7 @@ import (
 	operatorsconfig "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/deploying"
 	rendererutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/rendering"
+	operatorsutil "github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/util"
 )
 
 var (
@@ -146,7 +147,7 @@ func (r *ObservabilityAddonReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 
-		clusterID, err = getClusterID(ctx, r.Client)
+		clusterID, err = operatorsutil.GetClusterID(ctx, r.Client)
 		if err != nil {
 			// OCP 3.11 has no cluster id, set it as empty string
 			clusterID = ""
