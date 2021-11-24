@@ -118,6 +118,7 @@ func (r *ObservabilityAddonReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 	hubInfo.ClusterName = string(hubSecret.Data[operatorsconfig.ClusterNameKey])
+	hubInfo.HubClusterID = string(hubSecret.Data[operatorsconfig.HubClusterID])
 
 	clusterType := ""
 	clusterID := ""
