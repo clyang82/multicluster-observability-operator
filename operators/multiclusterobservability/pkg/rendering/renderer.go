@@ -71,6 +71,19 @@ func (r *MCORenderer) Render() ([]*unstructured.Unstructured, error) {
 	}
 	resources = append(resources, grafanaResources...)
 
+	if config.GetAnonymousGrafana() {
+		// load and render grafana templates
+		grafanaTemplates, err := templates.GetOrLoadAnonymousGrafanaTemplates(templatesutil.GetTemplateRenderer())
+		if err != nil {
+			return nil, err
+		}
+		grafanaResources, err := r.renderGrafanaTemplates(grafanaTemplates, namespace, labels)
+		if err != nil {
+			return nil, err
+		}
+		resources = append(resources, grafanaResources...)
+	}
+
 	//load and render alertmanager templates
 	alertTemplates, err := templates.GetOrLoadAlertManagerTemplates(templatesutil.GetTemplateRenderer())
 	if err != nil {

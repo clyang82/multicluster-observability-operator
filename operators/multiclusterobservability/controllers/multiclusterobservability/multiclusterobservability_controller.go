@@ -355,6 +355,10 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 				config.SetCustomRuleConfigMap(true)
 				return true
 			}
+			if e.Object.GetName() == config.AnonymousGrafanaConfigmapName &&
+				e.Object.GetNamespace() == config.GetDefaultNamespace() {
+				config.EnableAnonymousGrafana(true)
+			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {

@@ -83,6 +83,9 @@ const (
 	AlertmanagerURL               = "http://alertmanager:9093"
 	AlertmanagerConfigName        = "alertmanager-config"
 
+	AnonymousGrafanaConfigmapName = "anonymous-grafana-config"
+	AnonymousGrafanaConfigFileKey = "config.yaml"
+
 	AlertmanagersDefaultConfigMapName     = "thanos-ruler-config"
 	AlertmanagersDefaultConfigFileKey     = "config.yaml"
 	AlertmanagersDefaultCaBundleMountPath = "/etc/thanos/configmaps/alertmanager-ca-bundle"
@@ -277,6 +280,9 @@ var (
 	MemoryLimitMB   = int32(1024)
 	ConnectionLimit = int32(1024)
 	MaxItemSize     = "1m"
+
+	//
+	enableAnonymousGrafana = false
 )
 
 func GetReplicas(component string, advanced *observabilityv1beta2.AdvancedConfig) *int32 {
@@ -676,6 +682,14 @@ func GetObsAPISvc(instanceName string) string {
 // SetCustomRuleConfigMap set true if there is custom rule configmap
 func SetCustomRuleConfigMap(hasConfigMap bool) {
 	hasCustomRuleConfigMap = hasConfigMap
+}
+
+func EnableAnonymousGrafana(enabled bool) {
+	enableAnonymousGrafana = enabled
+}
+
+func GetAnonymousGrafana() bool {
+	return enableAnonymousGrafana
 }
 
 // HasCustomRuleConfigMap returns true if there is custom rule configmap

@@ -50,6 +50,21 @@ func GetOrLoadGrafanaTemplates(r *templates.TemplateRenderer) ([]*resource.Resou
 	return grafanaTemplates, nil
 }
 
+// GetOrLoadAnonymousGrafanaTemplates reads the anonymous grafana manifests
+func GetOrLoadAnonymousGrafanaTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
+	if len(grafanaTemplates) > 0 {
+		return grafanaTemplates, nil
+	}
+
+	basePath := path.Join(r.GetTemplatesPath(), "anonymous-grafana")
+
+	// add grafana template
+	if err := r.AddTemplateFromPath(basePath, &grafanaTemplates); err != nil {
+		return grafanaTemplates, err
+	}
+	return grafanaTemplates, nil
+}
+
 // GetOrLoadAlertManagerTemplates reads the alertmanager manifests
 func GetOrLoadAlertManagerTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
 	if len(alertManagerTemplates) > 0 {

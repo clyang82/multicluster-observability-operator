@@ -1,0 +1,20 @@
+apiVersion: v1
+stringData:
+  grafana.ini: |
+    [auth]
+    disable_login_form = true
+    disable_signout_menu = true
+    [auth.anonymous]
+    enabled = true
+    [paths]
+    data = /var/lib/grafana
+    logs = /var/lib/grafana/logs
+    plugins = /var/lib/grafana/plugins
+    provisioning = /etc/grafana/provisioning
+    [server]
+    http_port = 3001
+kind: Secret
+metadata:
+  name: anonymous-grafana-config
+  namespace: open-cluster-management-observability
+type: Opaque
