@@ -350,14 +350,17 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 
 	cmPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			if e.Object.GetName() == config.AlertRuleCustomConfigMapName &&
-				e.Object.GetNamespace() == config.GetDefaultNamespace() {
-				config.SetCustomRuleConfigMap(true)
-				return true
-			}
-			if e.Object.GetName() == config.AnonymousGrafanaConfigmapName &&
-				e.Object.GetNamespace() == config.GetDefaultNamespace() {
-				config.EnableAnonymousGrafana(true)
+			if e.Object.GetNamespace() == config.GetDefaultNamespace() {
+				needReconcile := false
+				if e.Object.GetName() == config.AlertRuleCustomConfigMapName {
+					config.SetCustomRuleConfigMap(true)
+					needReconcile = true
+				}
+				if e.Object.GetName() == config.AnonymousGrafanaConfigmapName {
+					config.EnableAnonymousGrafana(true)
+					needReconcile = true
+				}
+				return needReconcile
 			}
 			return false
 		},
@@ -373,8 +376,16 @@ func (r *MultiClusterObservabilityReconciler) SetupWithManager(mgr ctrl.Manager)
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			if e.Object.GetName() == config.AlertRuleCustomConfigMapName &&
 				e.Object.GetNamespace() == config.GetDefaultNamespace() {
-				config.SetCustomRuleConfigMap(false)
-				return true
+				needReconcile := false
+				if e.Object.GetName() == config.AlertRuleCustomConfigMapName {
+					config.SetCustomRuleConfigMap(false)
+					needReconcile = true
+				}
+				if e.Object.GetName() == config.AnonymousGrafanaConfigmapName {
+					config.EnableAnonymousGrafana(false)
+					needReconcile = true
+				}
+				return needReconcile
 			}
 			return false
 		},
