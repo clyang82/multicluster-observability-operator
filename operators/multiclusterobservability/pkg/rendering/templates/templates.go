@@ -12,7 +12,7 @@ import (
 )
 
 // *Templates contains all kustomize resources
-var genericTemplates, grafanaTemplates, alertManagerTemplates, thanosTemplates, proxyTemplates, endpointObservabilityTemplates, prometheusTemplates []*resource.Resource
+var genericTemplates, anonymousGrafanaTemplates, grafanaTemplates, alertManagerTemplates, thanosTemplates, proxyTemplates, endpointObservabilityTemplates, prometheusTemplates []*resource.Resource
 
 // GetOrLoadGenericTemplates reads base manifest
 func GetOrLoadGenericTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
@@ -52,17 +52,17 @@ func GetOrLoadGrafanaTemplates(r *templates.TemplateRenderer) ([]*resource.Resou
 
 // GetOrLoadAnonymousGrafanaTemplates reads the anonymous grafana manifests
 func GetOrLoadAnonymousGrafanaTemplates(r *templates.TemplateRenderer) ([]*resource.Resource, error) {
-	if len(grafanaTemplates) > 0 {
-		return grafanaTemplates, nil
+	if len(anonymousGrafanaTemplates) > 0 {
+		return anonymousGrafanaTemplates, nil
 	}
 
 	basePath := path.Join(r.GetTemplatesPath(), "anonymous-grafana")
 
 	// add grafana template
-	if err := r.AddTemplateFromPath(basePath, &grafanaTemplates); err != nil {
-		return grafanaTemplates, err
+	if err := r.AddTemplateFromPath(basePath, &anonymousGrafanaTemplates); err != nil {
+		return anonymousGrafanaTemplates, err
 	}
-	return grafanaTemplates, nil
+	return anonymousGrafanaTemplates, nil
 }
 
 // GetOrLoadAlertManagerTemplates reads the alertmanager manifests
@@ -146,6 +146,7 @@ func GetOrLoadPrometheusTemplates(r *templates.TemplateRenderer) ([]*resource.Re
 func ResetTemplates() {
 	genericTemplates = nil
 	grafanaTemplates = nil
+	anonymousGrafanaTemplates = nil
 	alertManagerTemplates = nil
 	thanosTemplates = nil
 	proxyTemplates = nil
