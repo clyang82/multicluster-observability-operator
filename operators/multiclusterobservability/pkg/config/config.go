@@ -209,6 +209,7 @@ const (
 	ThanosStoreShard             = "thanos-store-shard"
 	MemcachedExporter            = "memcached-exporter"
 	Grafana                      = "grafana"
+	AnonymousGrafana             = "anonymous-grafana"
 	RBACQueryProxy               = "rbac-query-proxy"
 	Alertmanager                 = "alertmanager"
 	ThanosReceiveController      = "thanos-receive-controller"
@@ -1040,6 +1041,7 @@ func SetOperandNames(c client.Client) error {
 	}
 	//set the default values.
 	operandNames[Grafana] = GetOperandNamePrefix() + Grafana
+	operandNames[AnonymousGrafana] = GetOperandNamePrefix() + AnonymousGrafana
 	operandNames[RBACQueryProxy] = GetOperandNamePrefix() + RBACQueryProxy
 	operandNames[Alertmanager] = GetOperandNamePrefix() + Alertmanager
 	operandNames[ObservatoriumOperator] = GetOperandNamePrefix() + ObservatoriumOperator

@@ -25,12 +25,13 @@ import (
 var log = logf.Log.WithName("renderer")
 
 type MCORenderer struct {
-	renderer              *rendererutil.Renderer
-	cr                    *obv1beta2.MultiClusterObservability
-	renderGrafanaFns      map[string]rendererutil.RenderFn
-	renderAlertManagerFns map[string]rendererutil.RenderFn
-	renderThanosFns       map[string]rendererutil.RenderFn
-	renderProxyFns        map[string]rendererutil.RenderFn
+	renderer                  *rendererutil.Renderer
+	cr                        *obv1beta2.MultiClusterObservability
+	renderGrafanaFns          map[string]rendererutil.RenderFn
+	renderAnonymousGrafanaFns map[string]rendererutil.RenderFn
+	renderAlertManagerFns     map[string]rendererutil.RenderFn
+	renderThanosFns           map[string]rendererutil.RenderFn
+	renderProxyFns            map[string]rendererutil.RenderFn
 }
 
 func NewMCORenderer(multipleClusterMonitoring *obv1beta2.MultiClusterObservability) *MCORenderer {
@@ -39,6 +40,7 @@ func NewMCORenderer(multipleClusterMonitoring *obv1beta2.MultiClusterObservabili
 		cr:       multipleClusterMonitoring,
 	}
 	mcoRenderer.newGranfanaRenderer()
+	mcoRenderer.newAnonymousGranfanaRenderer()
 	mcoRenderer.newAlertManagerRenderer()
 	mcoRenderer.newThanosRenderer()
 	mcoRenderer.newProxyRenderer()
@@ -77,7 +79,8 @@ func (r *MCORenderer) Render() ([]*unstructured.Unstructured, error) {
 		if err != nil {
 			return nil, err
 		}
-		anonymousGrafanaResources, err := r.renderGrafanaTemplates(anonymousGrafanaTemplates, namespace, labels)
+		anonymousGrafanaResources, err := r.renderAnonymousGrafanaTemplates(anonymousGrafanaTemplates,
+			namespace, labels)
 		if err != nil {
 			return nil, err
 		}
