@@ -60,7 +60,7 @@ var (
 )
 
 // NewGrafanaDashboardController ...
-func NewGrafanaDashboardController(from string) DashboardLoader {
+func NewGrafanaDashboardController(from string) *DashboardLoader {
 	config, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
 		klog.Error("Failed to get cluster config", "error", err)
@@ -71,7 +71,7 @@ func NewGrafanaDashboardController(from string) DashboardLoader {
 		klog.Fatal("Failed to build kubeclient", "error", err)
 	}
 
-	dl := DashboardLoader{
+	dl := &DashboardLoader{
 		coreClient: kubeClient.CoreV1(),
 		From:       from,
 	}
@@ -85,9 +85,7 @@ func isDesiredDashboardConfigmap(obj interface{}, from string) bool {
 	if !ok || cm == nil {
 		return false
 	}
-
 	if from == FromAnonymousGrafana && cm.GetName() == config.AnonymousGrafanaConfigmapName {
-		klog.Info("the request is ", "from ", FromAnonymousGrafana)
 		if from == FromAnonymousGrafana {
 			if obj.(*corev1.ConfigMap).GetName() == config.AnonymousGrafanaConfigmapName {
 				config := map[string]interface{}{}
@@ -303,6 +301,22 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 			klog.Error("Failed to unmarshall data", "error", err)
 			return
 		}
+		//need load this dashboard
+		needLoad := false
+
+		if from == FromAnonymousGrafana {
+			for dashboardName := range LoadDashboards {
+				klog.Info("the dashboard name", "dashboardName", dashboardName, "dashboard[\"title\"]", dashboard["title"])
+				if dashboardName == dashboard["title"] {
+					needLoad = true
+					break
+				}
+			}
+		}
+		if !needLoad {
+			continue
+		}
+
 		if dashboard["uid"] == nil {
 			dashboard["uid"], _ = util.GenerateUID(new.(*corev1.ConfigMap).GetName(),
 				new.(*corev1.ConfigMap).GetNamespace())
@@ -312,19 +326,6 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 			"folderId":  folderID,
 			"overwrite": overwrite,
 			"dashboard": dashboard,
-		}
-
-		if from == FromAnonymousGrafana {
-			needLoad := false
-			for dashboardName := range LoadDashboards {
-				klog.Info("the dashboard name", "dashboardName", dashboardName, "dashboard[\"title\"]", dashboard["title"])
-				if dashboardName == dashboard["title"] {
-					needLoad = true
-				}
-			}
-			if !needLoad {
-				continue
-			}
 		}
 
 		b, err := json.Marshal(data)
