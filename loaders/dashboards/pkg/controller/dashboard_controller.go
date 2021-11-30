@@ -316,7 +316,7 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 
 		if from == FromAnonymousGrafana {
 			needLoad := false
-			for dashboardName := range loadDashboards {
+			for dashboardName := range LoadDashboards {
 				klog.Info("the dashboard name", "dashboardName", dashboardName, "dashboard[\"title\"]", dashboard["title"])
 				if dashboardName == dashboard["title"] {
 					needLoad = true
