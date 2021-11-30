@@ -26,6 +26,7 @@ import (
 	"k8s.io/klog"
 
 	"github.com/open-cluster-management/multicluster-observability-operator/loaders/dashboards/pkg/util"
+	"github.com/open-cluster-management/multicluster-observability-operator/operators/pkg/config"
 )
 
 const (
@@ -36,10 +37,18 @@ const (
 	homeDashboardTitle  = "ACM - Clusters Overview"
 )
 
+const (
+	// from grafana
+	FromGrafana = "Grafana"
+	// from anonymous grafana
+	FromAnonymousGrafana = "AnonymousGrafana"
+)
+
 // DashboardLoader ...
 type DashboardLoader struct {
 	coreClient corev1client.CoreV1Interface
-	informer   cache.SharedIndexInformer
+	Informer   cache.SharedIndexInformer
+	From       string
 }
 
 var (
@@ -48,8 +57,8 @@ var (
 	retry = 10
 )
 
-// RunGrafanaDashboardController ...
-func RunGrafanaDashboardController(stop <-chan struct{}) {
+// NewGrafanaDashboardController ...
+func NewGrafanaDashboardController(from string) DashboardLoader {
 	config, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
 		klog.Error("Failed to get cluster config", "error", err)
@@ -60,14 +69,23 @@ func RunGrafanaDashboardController(stop <-chan struct{}) {
 		klog.Fatal("Failed to build kubeclient", "error", err)
 	}
 
-	go newKubeInformer(kubeClient.CoreV1()).Run(stop)
-	<-stop
+	dl := DashboardLoader{
+		coreClient: kubeClient.CoreV1(),
+		From:       from,
+	}
+	dl.Informer = dl.newKubeInformer()
+
+	return dl
 }
 
-func isDesiredDashboardConfigmap(obj interface{}) bool {
+func isDesiredDashboardConfigmap(obj interface{}, from string) bool {
 	cm, ok := obj.(*corev1.ConfigMap)
 	if !ok || cm == nil {
 		return false
+	}
+
+	if from == FromAnonymousGrafana && cm.GetName() == config.AnonymousGrafanaConfigmapName {
+		return true
 	}
 
 	labels := cm.ObjectMeta.Labels
@@ -85,15 +103,15 @@ func isDesiredDashboardConfigmap(obj interface{}) bool {
 	return false
 }
 
-func newKubeInformer(coreClient corev1client.CoreV1Interface) cache.SharedIndexInformer {
+func (d *DashboardLoader) newKubeInformer() cache.SharedIndexInformer {
 	// get watched namespace
 	watchedNS := os.Getenv("POD_NAMESPACE")
 	watchlist := &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-			return coreClient.ConfigMaps(watchedNS).List(context.TODO(), metav1.ListOptions{})
+			return d.coreClient.ConfigMaps(watchedNS).List(context.TODO(), metav1.ListOptions{})
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-			return coreClient.ConfigMaps(watchedNS).Watch(context.TODO(), metav1.ListOptions{})
+			return d.coreClient.ConfigMaps(watchedNS).Watch(context.TODO(), metav1.ListOptions{})
 		},
 	}
 	kubeInformer := cache.NewSharedIndexInformer(
@@ -105,24 +123,24 @@ func newKubeInformer(coreClient corev1client.CoreV1Interface) cache.SharedIndexI
 
 	kubeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			if !isDesiredDashboardConfigmap(obj) {
+			if !isDesiredDashboardConfigmap(obj, d.From) {
 				return
 			}
 			klog.Infof("detect there is a new dashboard %v created", obj.(*corev1.ConfigMap).Name)
-			updateDashboard(nil, obj, false)
+			updateDashboard(nil, obj, false, d.From)
 		},
 		UpdateFunc: func(old, new interface{}) {
 			if old.(*corev1.ConfigMap).ObjectMeta.ResourceVersion == new.(*corev1.ConfigMap).ObjectMeta.ResourceVersion {
 				return
 			}
-			if !isDesiredDashboardConfigmap(new) {
+			if !isDesiredDashboardConfigmap(new, d.From) {
 				return
 			}
 			klog.Infof("detect there is a dashboard %v updated", new.(*corev1.ConfigMap).Name)
-			updateDashboard(old, new, false)
+			updateDashboard(old, new, false, d.From)
 		},
 		DeleteFunc: func(obj interface{}) {
-			if !isDesiredDashboardConfigmap(obj) {
+			if !isDesiredDashboardConfigmap(obj, d.From) {
 				return
 			}
 			klog.Infof("detect there is a dashboard %v deleted", obj.(*corev1.ConfigMap).Name)
@@ -248,13 +266,30 @@ func getDashboardCustomFolderTitle(obj interface{}) string {
 }
 
 // updateDashboard is used to update the customized dashboards via calling grafana api
-func updateDashboard(old, new interface{}, overwrite bool) {
+func updateDashboard(old, new interface{}, overwrite bool, from string) {
 	folderID := 0.0
 	folderTitle := getDashboardCustomFolderTitle(new)
 	if folderTitle != "" {
 		folderID = createCustomFolder(folderTitle)
 		if folderID == 0 {
 			klog.Error("Failed to get custom folder id")
+			return
+		}
+	}
+
+	var loadDashboards []string
+
+	if from == FromAnonymousGrafana {
+		if new.(*corev1.ConfigMap).GetName() == config.AnonymousGrafanaConfigmapName {
+			config := map[string]interface{}{}
+			err := json.Unmarshal([]byte(new.(*corev1.ConfigMap).Data["config.yaml"]), &config)
+			if err != nil {
+				klog.Error("Failed to unmarshall data", "error", err)
+				return
+			}
+			loadDashboards = config["loadDashboards"].([]string)
+		}
+		if len(loadDashboards) == 0 {
 			return
 		}
 	}
@@ -278,6 +313,18 @@ func updateDashboard(old, new interface{}, overwrite bool) {
 			"dashboard": dashboard,
 		}
 
+		if from == FromAnonymousGrafana {
+			needLoad := false
+			for dashboardName := range loadDashboards {
+				if dashboardName == dashboard["title"] {
+					needLoad = true
+				}
+			}
+			if !needLoad {
+				continue
+			}
+		}
+
 		b, err := json.Marshal(data)
 		if err != nil {
 			klog.Error("failed to marshal body", "error", err)
@@ -290,7 +337,7 @@ func updateDashboard(old, new interface{}, overwrite bool) {
 		if respStatusCode != http.StatusOK {
 			if respStatusCode == http.StatusPreconditionFailed {
 				if strings.Contains(string(body), "version-mismatch") {
-					updateDashboard(nil, new, true)
+					updateDashboard(nil, new, true, from)
 				} else if strings.Contains(string(body), "name-exists") {
 					klog.Info("the dashboard name already existed")
 				} else {

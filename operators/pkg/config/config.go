@@ -35,6 +35,9 @@ const (
 
 	ConfigmapReloaderImgName = "origin-configmap-reloader"
 	ConfigmapReloaderKey     = "prometheus-config-reloader"
+
+	AnonymousGrafanaConfigmapName = "anonymous-grafana-config"
+	AnonymousGrafanaConfigFileKey = "config.yaml"
 )
 
 var (

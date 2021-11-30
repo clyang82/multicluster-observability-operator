@@ -100,8 +100,12 @@ func TestGrafanaDashboardController(t *testing.T) {
 
 	os.Setenv("POD_NAMESPACE", "ns2")
 
-	informer := newKubeInformer(coreClient)
-	go informer.Run(stop)
+	dl := DashboardLoader{
+		coreClient: coreClient,
+		From:       "Grafana",
+	}
+	dl.Informer = dl.newKubeInformer()
+	go dl.Informer.Run(stop)
 
 	cm, err := createDashboard()
 	if err == nil {
@@ -111,7 +115,7 @@ func TestGrafanaDashboardController(t *testing.T) {
 		}
 		// wait for 2 second to trigger AddFunc of informer
 		time.Sleep(time.Second * 2)
-		updateDashboard(nil, cm, false)
+		updateDashboard(nil, cm, false, dl.From)
 
 		cm.Data = map[string]string{}
 		_, err = coreClient.ConfigMaps("ns2").Update(context.TODO(), cm, metav1.UpdateOptions{})
@@ -120,7 +124,7 @@ func TestGrafanaDashboardController(t *testing.T) {
 		}
 		// wait for 2 second to trigger UpdateFunc of informer
 		time.Sleep(time.Second * 2)
-		updateDashboard(nil, cm, false)
+		updateDashboard(nil, cm, false, dl.From)
 
 		cm, _ := createDashboard()
 		_, err = coreClient.ConfigMaps("ns2").Update(context.TODO(), cm, metav1.UpdateOptions{})
@@ -130,7 +134,7 @@ func TestGrafanaDashboardController(t *testing.T) {
 
 		// wait for 2 second to trigger UpdateFunc of informer
 		time.Sleep(time.Second * 2)
-		updateDashboard(nil, cm, false)
+		updateDashboard(nil, cm, false, dl.From)
 
 		coreClient.ConfigMaps("ns2").Delete(context.TODO(), cm.GetName(), metav1.DeleteOptions{})
 		time.Sleep(time.Second * 2)
@@ -224,7 +228,7 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 	}
 
 	for _, c := range testCaseList {
-		output := isDesiredDashboardConfigmap(c.cm)
+		output := isDesiredDashboardConfigmap(c.cm, "Grafana")
 		if output != c.expected {
 			t.Errorf("case (%v) output: (%v) is not the expected: (%v)", c.name, output, c.expected)
 		}

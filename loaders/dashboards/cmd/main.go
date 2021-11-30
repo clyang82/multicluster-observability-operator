@@ -17,16 +17,21 @@ import (
 
 func main() {
 
+	var from string
+
 	klogFlags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	klog.InitFlags(klogFlags)
 	flagset := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 	flagset.AddGoFlagSet(klogFlags)
 
+	flagset.StringVar(&from, "from",
+		"grafana", "the values can be grafana and anonymous grafana")
+
 	// use a channel to synchronize the finalization for a graceful shutdown
 	stop := make(chan struct{})
 	defer close(stop)
 
-	controller.RunGrafanaDashboardController(stop)
+	go controller.NewGrafanaDashboardController(from).Informer.Run(stop)
 
 	// use a channel to handle OS signals to terminate and gracefully shut
 	// down processing

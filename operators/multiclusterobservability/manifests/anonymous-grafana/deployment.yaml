@@ -7,7 +7,7 @@ metadata:
   name: anonymous-grafana
   namespace: open-cluster-management-observability
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: multicluster-observability-anonymous-grafana
@@ -63,7 +63,9 @@ spec:
           name: grafana-datasources
         - mountPath: /etc/grafana
           name: grafana-config
-      - name: grafana-dashboard-loader
+      - args:
+        - -from=AnonymousGrafana
+        name: grafana-dashboard-loader
         env:
         - name: POD_NAMESPACE
           valueFrom:

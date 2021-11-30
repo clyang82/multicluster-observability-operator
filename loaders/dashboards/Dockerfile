@@ -5,6 +5,7 @@ FROM registry.ci.openshift.org/open-cluster-management/builder:go1.17-linux AS b
 WORKDIR /workspace
 COPY go.sum go.mod ./loaders/dashboards ./
 COPY ./loaders/dashboards ./loaders/dashboards
+COPY ./operators/pkg ./operators/pkg
 
 RUN CGO_ENABLED=0 go build -a -installsuffix cgo -v -i -o main loaders/dashboards/cmd/main.go
 
