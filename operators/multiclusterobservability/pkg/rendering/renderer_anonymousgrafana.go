@@ -54,8 +54,10 @@ func (r *MCORenderer) renderAnonymousGrafanaDeployments(res *resource.Resource,
 	if found {
 		spec.Containers[0].Image = image
 	}
+	spec.Containers[0].ImagePullPolicy = config.GetImagePullPolicy(r.cr.Spec)
 	spec.Containers[0].Resources = config.GetResources(config.AnonymousGrafana, r.cr.Spec.AdvancedConfig)
 
+	spec.Containers[1].ImagePullPolicy = config.GetImagePullPolicy(r.cr.Spec)
 	spec.Containers[1].Image = config.DefaultImgRepository + "/" + config.GrafanaDashboardLoaderName +
 		":" + config.DefaultImgTagSuffix
 	found, image = config.ReplaceImage(r.cr.Annotations, spec.Containers[1].Image,

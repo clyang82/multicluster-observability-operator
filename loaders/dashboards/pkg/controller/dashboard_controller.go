@@ -55,6 +55,8 @@ var (
 	grafanaURI = "http://127.0.0.1:3001"
 	//retry on errors
 	retry = 10
+
+	LoadDashboards []string
 )
 
 // NewGrafanaDashboardController ...
@@ -85,6 +87,22 @@ func isDesiredDashboardConfigmap(obj interface{}, from string) bool {
 	}
 
 	if from == FromAnonymousGrafana && cm.GetName() == config.AnonymousGrafanaConfigmapName {
+		klog.Info("the request is ", "from ", FromAnonymousGrafana)
+		if from == FromAnonymousGrafana {
+			if obj.(*corev1.ConfigMap).GetName() == config.AnonymousGrafanaConfigmapName {
+				config := map[string]interface{}{}
+				err := json.Unmarshal([]byte(obj.(*corev1.ConfigMap).Data["config.yaml"]), &config)
+				if err != nil {
+					klog.Error("Failed to unmarshall data", "error", err)
+					return false
+				}
+				LoadDashboards = config["loadDashboards"].([]string)
+			}
+			klog.Info("the loaded dashboards", "dashboards", LoadDashboards)
+			if len(LoadDashboards) == 0 {
+				return false
+			}
+		}
 		return true
 	}
 
@@ -273,25 +291,6 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 		folderID = createCustomFolder(folderTitle)
 		if folderID == 0 {
 			klog.Error("Failed to get custom folder id")
-			return
-		}
-	}
-
-	var loadDashboards []string
-
-	klog.Info("the request is", "from", FromAnonymousGrafana)
-	if from == FromAnonymousGrafana {
-		if new.(*corev1.ConfigMap).GetName() == config.AnonymousGrafanaConfigmapName {
-			config := map[string]interface{}{}
-			err := json.Unmarshal([]byte(new.(*corev1.ConfigMap).Data["config.yaml"]), &config)
-			if err != nil {
-				klog.Error("Failed to unmarshall data", "error", err)
-				return
-			}
-			loadDashboards = config["loadDashboards"].([]string)
-		}
-		klog.Info("the loaded dashboards", "dashboards", loadDashboards)
-		if len(loadDashboards) == 0 {
 			return
 		}
 	}
