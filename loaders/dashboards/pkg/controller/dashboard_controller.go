@@ -39,9 +39,9 @@ const (
 
 const (
 	// from grafana
-	FromGrafana = "Grafana"
+	FromGrafana = "grafana"
 	// from anonymous grafana
-	FromAnonymousGrafana = "AnonymousGrafana"
+	FromAnonymousGrafana = "anonymousgrafana"
 )
 
 // DashboardLoader ...
@@ -279,6 +279,7 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 
 	var loadDashboards []string
 
+	klog.Info("the request is", "from", FromAnonymousGrafana)
 	if from == FromAnonymousGrafana {
 		if new.(*corev1.ConfigMap).GetName() == config.AnonymousGrafanaConfigmapName {
 			config := map[string]interface{}{}
@@ -289,6 +290,7 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 			}
 			loadDashboards = config["loadDashboards"].([]string)
 		}
+		klog.Info("the loaded dashboards", "dashboards", loadDashboards)
 		if len(loadDashboards) == 0 {
 			return
 		}
@@ -316,6 +318,7 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 		if from == FromAnonymousGrafana {
 			needLoad := false
 			for dashboardName := range loadDashboards {
+				klog.Info("the dashboard name", "dashboardName", dashboardName, "dashboard[\"title\"]", dashboard["title"])
 				if dashboardName == dashboard["title"] {
 					needLoad = true
 				}

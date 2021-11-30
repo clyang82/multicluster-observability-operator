@@ -25,7 +25,7 @@ func main() {
 	flagset.AddGoFlagSet(klogFlags)
 
 	flagset.StringVar(&from, "from",
-		"grafana", "the values can be grafana and anonymous grafana")
+		"grafana", "the values can be grafana and anonymousgrafana")
 
 	// use a channel to synchronize the finalization for a graceful shutdown
 	stop := make(chan struct{})

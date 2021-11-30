@@ -102,7 +102,7 @@ func TestGrafanaDashboardController(t *testing.T) {
 
 	dl := DashboardLoader{
 		coreClient: coreClient,
-		From:       "Grafana",
+		From:       "grafana",
 	}
 	dl.Informer = dl.newKubeInformer()
 	go dl.Informer.Run(stop)
@@ -228,7 +228,7 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 	}
 
 	for _, c := range testCaseList {
-		output := isDesiredDashboardConfigmap(c.cm, "Grafana")
+		output := isDesiredDashboardConfigmap(c.cm, "grafana")
 		if output != c.expected {
 			t.Errorf("case (%v) output: (%v) is not the expected: (%v)", c.name, output, c.expected)
 		}

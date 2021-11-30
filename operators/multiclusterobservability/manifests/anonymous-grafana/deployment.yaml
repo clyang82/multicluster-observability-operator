@@ -64,7 +64,7 @@ spec:
         - mountPath: /etc/grafana
           name: grafana-config
       - args:
-        - -from=AnonymousGrafana
+        - -from=anonymousgrafana
         name: grafana-dashboard-loader
         env:
         - name: POD_NAMESPACE
