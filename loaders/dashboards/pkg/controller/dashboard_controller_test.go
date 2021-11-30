@@ -152,12 +152,14 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 		name     string
 		cm       *corev1.ConfigMap
 		expected bool
+		from     string
 	}{
 
 		{
 			"invalid cm",
 			nil,
 			false,
+			"grafana",
 		},
 
 		{
@@ -170,6 +172,7 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 				},
 			},
 			true,
+			"grafana",
 		},
 
 		{
@@ -184,6 +187,7 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 				},
 			},
 			true,
+			"grafana",
 		},
 
 		{
@@ -196,6 +200,7 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 				},
 			},
 			false,
+			"grafana",
 		},
 
 		{
@@ -210,6 +215,25 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 				},
 			},
 			false,
+			"grafana",
+		},
+
+		{
+			"anonymous grafana configmap",
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "anonymous-grafana-config",
+					Namespace: "test",
+				},
+				Data: map[string]string{
+					"config.yaml": `
+loadDashboards:
+- a
+- b
+`},
+			},
+			true,
+			"anonymousgrafana",
 		},
 
 		{
@@ -224,11 +248,12 @@ func TestIsDesiredDashboardConfigmap(t *testing.T) {
 				},
 			},
 			false,
+			"grafana",
 		},
 	}
 
 	for _, c := range testCaseList {
-		output := isDesiredDashboardConfigmap(c.cm, "grafana")
+		output := isDesiredDashboardConfigmap(c.cm, c.from)
 		if output != c.expected {
 			t.Errorf("case (%v) output: (%v) is not the expected: (%v)", c.name, output, c.expected)
 		}

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -85,23 +86,30 @@ func isDesiredDashboardConfigmap(obj interface{}, from string) bool {
 	if !ok || cm == nil {
 		return false
 	}
+
 	if from == FromAnonymousGrafana && cm.GetName() == config.AnonymousGrafanaConfigmapName {
-		if from == FromAnonymousGrafana {
-			if obj.(*corev1.ConfigMap).GetName() == config.AnonymousGrafanaConfigmapName {
-				config := map[string]interface{}{}
-				err := json.Unmarshal([]byte(obj.(*corev1.ConfigMap).Data["config.yaml"]), &config)
-				if err != nil {
-					klog.Error("Failed to unmarshall data", "error", err)
-					return false
-				}
-				LoadDashboards = config["loadDashboards"].([]string)
+		if obj.(*corev1.ConfigMap).Data != nil {
+			config := map[string]interface{}{}
+			err := yaml.Unmarshal([]byte(obj.(*corev1.ConfigMap).Data["config.yaml"]), &config)
+			if err != nil {
+				klog.Errorf("Failed to unmarshall data due to %v", err)
+				return false
 			}
-			klog.Info("the loaded dashboards", "dashboards", LoadDashboards)
+			d := config["loadDashboards"].([]interface{})
+			LoadDashboards = make([]string, len(d))
+			for i, v := range d {
+				LoadDashboards[i] = fmt.Sprint(v)
+			}
+			klog.Infof("the loaded dashboards %v", LoadDashboards)
 			if len(LoadDashboards) == 0 {
 				return false
 			}
+		} else {
+			LoadDashboards = []string{}
 		}
-		return true
+		//even there has dashboards need to be loaded, it can be triggered by real dashboard configmap
+		//reloadAllDashboardConfigmaps()
+		return false
 	}
 
 	labels := cm.ObjectMeta.Labels
@@ -301,20 +309,20 @@ func updateDashboard(old, new interface{}, overwrite bool, from string) {
 			klog.Error("Failed to unmarshall data", "error", err)
 			return
 		}
-		//need load this dashboard
-		needLoad := false
 
 		if from == FromAnonymousGrafana {
-			for dashboardName := range LoadDashboards {
-				klog.Info("the dashboard name", "dashboardName", dashboardName, "dashboard[\"title\"]", dashboard["title"])
+			//need load this dashboard
+			needLoad := false
+			for _, dashboardName := range LoadDashboards {
+				klog.Infof("the current dashboard name is %v and the desire dashboard name is %v", dashboard["title"], dashboardName)
 				if dashboardName == dashboard["title"] {
 					needLoad = true
 					break
 				}
 			}
-		}
-		if !needLoad {
-			continue
+			if !needLoad {
+				return
+			}
 		}
 
 		if dashboard["uid"] == nil {
